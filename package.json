@@ -1,6 +1,14 @@
 {
   "name": "hmo-v2",
-  "version": "0.0.0",
+  "version": "0.0.2",
+  "description": "Hyper M v2 Angular Frontend",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hyper-m/hmo_app.git"
+  },
+  "author": "Hyper M",
+  "license": "MIT",
+  "homepage": "https://github.com/hyper-m/hmo_app",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -22,6 +30,7 @@
     "@angular/router": "^20.0.0",
     "@angular/ssr": "^20.0.1",
     "express": "^5.1.0",
+    "jwt-decode": "^4.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

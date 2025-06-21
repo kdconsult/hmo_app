@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Angular Data Layer: GraphQL Communication Strategy
+
+## Principle
+The `hmo_app` Angular application will handle all data interactions with the backend by communicating exclusively with the GraphQL API provided by the Hasura engine in the `hmo_graphql` project. Direct calls to other backend services or databases from the frontend are prohibited.
+
+## Communication Protocol
+- **Protocol**: GraphQL
+- **Endpoint**: The single Hasura GraphQL endpoint. (The specific URL should be managed via environment variables).
+
+## GraphQL Operations
+The data layer will be built using the three core GraphQL operation types:
+- **Queries**: Used for all data retrieval operations (e.g., fetching a list of partners, getting nomenclature details).
+- **Mutations**: Used for all data modification operations (e.g., creating a sales order, updating a partner's information, deleting a user).
+- **Subscriptions**: Used for all real-time functionalities where the UI needs to update automatically when data changes in the backend (e.g., real-time inventory levels, live order status updates).
+
+## Implementation Strategy
+- **Encapsulation**: All GraphQL queries, mutations, and subscriptions should be encapsulated within dedicated Angular services (e.g., `PartnersService`, `SalesOrderService`). Components should inject these services rather than constructing GraphQL queries themselves.
+- **Tooling**: It is highly recommended to use a robust GraphQL client library for Angular, such as **Apollo Angular**, to manage caching, state management, and the boilerplate of making requests.
+- **Code Generation**: Consider using tools like **GraphQL Code Generator** to automatically generate TypeScript types and service methods from the GraphQL schema, ensuring type safety between the frontend and backend.
