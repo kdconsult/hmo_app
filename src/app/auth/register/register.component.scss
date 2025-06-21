@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.register-card {
+  max-width: 400px;
+  width: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.register-error-message {
+  color: var(--mat-form-field-error-text-color, #f44336);
+  padding: 10px 0;
+  text-align: center;
+}
+
+mat-card-actions {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 16px;
+}
