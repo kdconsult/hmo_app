@@ -17,11 +17,16 @@ import {
 import { Observable, of, throwError } from 'rxjs';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Router } from '@angular/router';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+import { lastValueFrom } from 'rxjs'; // For async tests
+
 
 import { AuthInterceptor, authInterceptorFn, BYPASS_AUTH_INTERCEPTOR } from './auth.interceptor';
 import { AuthService } from './auth.service';
-import { environment } from '@/environments/environment';
+import { environment } from '@/environments/environment'; // Standardized path alias
 
+
+// Tests begin here, the duplicated describe and its content above this point are removed.
 describe('AuthInterceptor', () => {
   let httpMock: HttpTestingController;
   let httpClient: HttpClient;
@@ -51,24 +56,25 @@ describe('AuthInterceptor', () => {
     httpClient = TestBed.inject(HttpClient);
     httpMock = TestBed.inject(HttpTestingController);
     authService = TestBed.inject(AuthService);
-    router = TestBed.inject(Router); // Though not directly used in these interceptor tests, good for setup
+    router = TestBed.inject(Router);
 
-    // Spy on AuthService methods
-    jest.spyOn(authService, 'getAccessToken');
-    jest.spyOn(authService, 'refreshToken');
-    jest.spyOn(authService, 'logout').mockImplementation(() => {}); // Mock logout to prevent navigation issues in tests
+    // Spy on AuthService methods using Vitest
+    vi.spyOn(authService, 'getAccessToken');
+    vi.spyOn(authService, 'refreshToken');
+    vi.spyOn(authService, 'logout').mockImplementation(() => {}); // Mock logout
 
-    // Clear localStorage for clean tests
     localStorage.clear();
   });
 
   afterEach(() => {
     httpMock.verify();
     localStorage.clear();
+    vi.clearAllMocks(); // Clear all Vitest mocks
   });
 
-  it('should add Authorization header if access token exists', () => {
-    (authService.getAccessToken as jest.Mock).mockReturnValue(mockAccessToken);
+   it('should add Authorization header if access token exists', () => {
+    // Ensure the mock is correctly typed for Vitest if needed, or use generic mockReturnValue
+    (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
 
     makeRequest().subscribe();
 
@@ -80,105 +86,95 @@ describe('AuthInterceptor', () => {
     httpRequest.flush({}); // Complete the request
   });
 
-  it('should not add Authorization header if access token does not exist', () => {
-    (authService.getAccessToken as jest.Mock).mockReturnValue(null);
+  it('should not add Authorization header if access token does not exist', async () => {
+    (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(null);
 
-    makeRequest().subscribe();
-
+    const reqPromise = lastValueFrom(makeRequest());
     const httpRequest = httpMock.expectOne(testUrl);
     expect(httpRequest.request.headers.has('Authorization')).toBe(false);
     httpRequest.flush({});
+    await reqPromise; // ensure subscription completes
   });
 
   describe('401 Error Handling and Token Refresh', () => {
-    it('should attempt to refresh token on 401 error', (done) => {
-      (authService.getAccessToken as jest.Mock).mockReturnValue(mockAccessToken);
-      (authService.refreshToken as jest.Mock).mockReturnValue(of({ accessToken: mockNewAccessToken }));
+    it('should attempt to refresh token on 401 error and retry with new token', async () => {
+      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
+      (authService.refreshToken as ReturnType<typeof vi.fn>).mockReturnValue(of({ accessToken: mockNewAccessToken }));
 
-      makeRequest().subscribe({
-        next: () => {
-          expect(authService.refreshToken).toHaveBeenCalledTimes(1);
-          done();
-        },
-        error: () => fail('Should have succeeded after token refresh')
-      });
+      const reqPromise = lastValueFrom(makeRequest());
 
-      // First request fails with 401
       const failedReq = httpMock.expectOne(testUrl);
       expect(failedReq.request.headers.get('Authorization')).toBe(`Bearer ${mockAccessToken}`);
       failedReq.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
 
-      // Expect refresh token call (interceptor uses authService.refreshToken)
-      // authService.refreshToken is mocked, so no httpMock for refresh here unless we test unmocked service
+      // refreshToken mock is called by the interceptor
+      // No httpMock for refresh call itself as authService.refreshToken is mocked
 
-      // Expect original request to be retried with new token
       const retriedReq = httpMock.expectOne(testUrl);
       expect(retriedReq.request.headers.get('Authorization')).toBe(`Bearer ${mockNewAccessToken}`);
       retriedReq.flush({}); // Simulate successful retry
+
+      await reqPromise; // This will complete if retry is successful
+      expect(authService.refreshToken).toHaveBeenCalledTimes(1);
     });
 
-    it('should logout if refresh token call fails', (done) => {
-      (authService.getAccessToken as jest.Mock).mockReturnValue(mockAccessToken);
-      (authService.refreshToken as jest.Mock).mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401, error: 'Refresh failed' })));
+    it('should logout if refresh token call fails', async () => {
+      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
+      const refreshError = new HttpErrorResponse({ status: 401, error: 'Refresh failed' });
+      (authService.refreshToken as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() => refreshError));
 
-      makeRequest().subscribe({
-        next: () => fail('Request should have failed'),
-        error: (error) => {
-          expect(authService.refreshToken).toHaveBeenCalledTimes(1);
-          expect(authService.logout).toHaveBeenCalledTimes(1);
-          expect(error.status).toBe(401); // Original 401 error or the refresh error
-          done();
-        },
-      });
-
-      const failedReq = httpMock.expectOne(testUrl);
-      failedReq.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+      try {
+        const reqPromise = lastValueFrom(makeRequest());
+        const failedReq = httpMock.expectOne(testUrl);
+        failedReq.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+        await reqPromise;
+        // Vitest: expect assertion to fail if no error
+        expect.fail('Request should have failed');
+      } catch (error: any) {
+        expect(authService.refreshToken).toHaveBeenCalledTimes(1);
+        expect(authService.logout).toHaveBeenCalledTimes(1);
+        // The error caught by `lastValueFrom` will be the one from the refreshToken call
+        // or the one rethrown by the interceptor after logout.
+        expect(error).toBe(refreshError); // Or a new error wrapping it
+      }
     });
 
+    it('should not attempt to refresh token for /auth/refresh-token URL on 401 and logout', async () => {
+      const refreshTokenUrl = `${environment.apiUrl}/auth/refresh-token`;
+      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
 
-    it('should not attempt to refresh token for /auth/refresh-token URL on 401', (done) => {
-        const refreshTokenUrl = `${environment.apiUrl}/auth/refresh-token`;
-        (authService.getAccessToken as jest.Mock).mockReturnValue(mockAccessToken); // Token might be present
-
-        makeRequest(refreshTokenUrl).subscribe({
-            next: () => fail('Request to refresh token URL itself should not succeed here if it 401s'),
-            error: (error: HttpErrorResponse) => {
-                expect(error.status).toBe(401);
-                expect(authService.refreshToken).not.toHaveBeenCalled(); // Crucial: refresh should not be called
-                expect(authService.logout).toHaveBeenCalledTimes(1); // Interceptor should call logout directly
-                done();
-            }
-        });
-
+      try {
+        const reqPromise = lastValueFrom(makeRequest(refreshTokenUrl));
         const req = httpMock.expectOne(refreshTokenUrl);
         req.flush({ message: 'Refresh token invalid' }, { status: 401, statusText: 'Unauthorized' });
+        await reqPromise;
+        expect.fail('Request should have failed');
+      } catch (error: any) {
+        expect(error instanceof HttpErrorResponse).toBe(true);
+        expect(error.status).toBe(401);
+        expect(authService.refreshToken).not.toHaveBeenCalled();
+        expect(authService.logout).toHaveBeenCalledTimes(1);
+      }
     });
 
+    it('should handle concurrent requests by refreshing token only once', async () => {
+      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
+      (authService.refreshToken as ReturnType<typeof vi.fn>).mockReturnValue(of({ accessToken: mockNewAccessToken }));
 
-    it('should handle concurrent requests by refreshing token only once', (done) => {
-      (authService.getAccessToken as jest.Mock).mockReturnValue(mockAccessToken);
-      (authService.refreshToken as jest.Mock).mockReturnValue(of({ accessToken: mockNewAccessToken }).pipe());// Delay pipe removed for simplicity in test
+      const req1Promise = lastValueFrom(makeRequest('/api/data1'));
+      const req2Promise = lastValueFrom(makeRequest('/api/data2'));
 
-      const request1 = makeRequest('/api/data1');
-      const request2 = makeRequest('/api/data2');
-
-      let c1 = false, c2 = false;
-      const checkDone = () => { if(c1 && c2) done(); };
-
-      request1.subscribe({ next: () => { c1 = true; checkDone(); }, error: () => fail('req1 failed')});
-      request2.subscribe({ next: () => { c2 = true; checkDone(); }, error: () => fail('req2 failed')});
-
-      // Simulate both requests failing with 401
       const failedReq1 = httpMock.expectOne('/api/data1');
       failedReq1.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
 
       const failedReq2 = httpMock.expectOne('/api/data2');
       failedReq2.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
 
-      // Refresh token should be called only once
+      // At this point, refreshToken should have been triggered by the first 401.
+      // The second 401 should queue behind the ongoing refresh.
+
       expect(authService.refreshToken).toHaveBeenCalledTimes(1);
 
-      // Both original requests should be retried with the new token
       const retriedReq1 = httpMock.expectOne('/api/data1');
       expect(retriedReq1.request.headers.get('Authorization')).toBe(`Bearer ${mockNewAccessToken}`);
       retriedReq1.flush({});
@@ -186,13 +182,15 @@ describe('AuthInterceptor', () => {
       const retriedReq2 = httpMock.expectOne('/api/data2');
       expect(retriedReq2.request.headers.get('Authorization')).toBe(`Bearer ${mockNewAccessToken}`);
       retriedReq2.flush({});
+
+      await Promise.all([req1Promise, req2Promise]); // Ensure both requests complete successfully
     });
 
-    it('should bypass interceptor if BYPASS_AUTH_INTERCEPTOR context token is true', () => {
-        (authService.getAccessToken as jest.Mock).mockReturnValue(mockAccessToken);
+    it('should bypass interceptor if BYPASS_AUTH_INTERCEPTOR context token is true', async () => {
+        (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
         const context = new HttpContext().set(BYPASS_AUTH_INTERCEPTOR, true);
 
-        makeRequest(testUrl, context).subscribe();
+        const reqPromise = lastValueFrom(makeRequest(testUrl, context));
 
         const httpRequest = httpMock.expectOne(testUrl);
         // Authorization header should NOT be added by this interceptor's primary logic

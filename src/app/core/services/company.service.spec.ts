@@ -4,7 +4,9 @@ import {
   HttpTestingController,
 } from '@angular/common/http/testing';
 import { CompanyService, CompanyCreationData } from './company.service';
-import { environment } from '@/environments/environment';
+import { environment } from '@/environments/environment'; // Standardized path alias
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+
 
 describe('CompanyService', () => {
   let service: CompanyService;
@@ -56,19 +58,27 @@ describe('CompanyService', () => {
     });
 
     it('should handle HTTP errors', () => {
-        const mockCompanyData: CompanyCreationData = { /* ... */ } as CompanyCreationData;
+        const mockCompanyData: CompanyCreationData = {company_name: "Fail Co"} as CompanyCreationData; // minimal valid data
         const errorMessage = 'Failed to create company';
 
-        service.createCompany(mockCompanyData).subscribe({
-            next: () => fail('should have failed with the 400 error'),
-            error: (error) => {
-                expect(error.status).toBe(400);
-                expect(error.error).toBe(errorMessage);
-            }
+        const promise = new Promise<void>((resolve, reject) => {
+            service.createCompany(mockCompanyData).subscribe({
+                next: () => reject(new Error('should have failed with the 400 error')), // Use reject for Promise
+                error: (error) => {
+                    try {
+                        expect(error.status).toBe(400);
+                        expect(error.error).toBe(errorMessage);
+                        resolve(); // Resolve on successful assertion
+                    } catch (e) {
+                        reject(e); // Reject if assertions fail
+                    }
+                }
+            });
         });
 
         const req = httpMock.expectOne(`${environment.apiUrl}/companies`);
         req.flush(errorMessage, { status: 400, statusText: 'Bad Request' });
+        return promise; // Return the promise for Vitest to await
     });
   });
 });

@@ -6,9 +6,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { CreateCompanyComponent } from './create-company.component';
-import { LookupService, Country, CompanyType, LocaleInfo, Currency } from '@/app/core/services/lookup.service';
-import { CompanyService, CompanyCreationData } from '@/app/core/services/company.service';
-import { AuthService } from '@/app/auth/auth.service';
+import { LookupService, Country, CompanyType, LocaleInfo, Currency } from '@/core/services/lookup.service';
+import { CompanyService, CompanyCreationData } from '@/core/services/company.service';
+import { AuthService } from '@/auth/auth.service';
+
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
 
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
@@ -20,25 +22,24 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
 class MockLookupService {
-  getCountries = jest.fn().mockReturnValue(of([] as Country[]));
-  getCompanyTypes = jest.fn().mockReturnValue(of([] as CompanyType[]));
-  getLocales = jest.fn().mockReturnValue(of([] as LocaleInfo[]));
-  getCurrencies = jest.fn().mockReturnValue(of([] as Currency[]));
+  getCountries = vi.fn().mockReturnValue(of([] as Country[]));
+  getCompanyTypes = vi.fn().mockReturnValue(of([] as CompanyType[]));
+  getLocales = vi.fn().mockReturnValue(of([] as LocaleInfo[]));
+  getCurrencies = vi.fn().mockReturnValue(of([] as Currency[]));
 }
 
 class MockCompanyService {
-  createCompany = jest.fn();
+  createCompany = vi.fn();
 }
 
 class MockAuthService {
-  updateTokens = jest.fn();
-  logout = jest.fn();
-  getRefreshToken = jest.fn().mockReturnValue('fake-refresh-token'); // Needed for updateTokens internal logic
-  // Add _setTokens or setTokens if directly called, but updateTokens is the public API
+  updateTokens = vi.fn();
+  logout = vi.fn();
+  getRefreshToken = vi.fn().mockReturnValue('fake-refresh-token');
 }
 
 class MockRouter {
-  navigate = jest.fn();
+  navigate = vi.fn();
 }
 
 describe('CreateCompanyComponent', () => {
@@ -83,6 +84,10 @@ describe('CreateCompanyComponent', () => {
     lookupService.getCompanyTypes.mockReturnValue(of(mockCompanyTypes));
     lookupService.getLocales.mockReturnValue(of(mockLocales));
     lookupService.getCurrencies.mockReturnValue(of(mockCurrencies));
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it('should create', () => {
@@ -233,7 +238,7 @@ describe('CreateCompanyComponent', () => {
 
     it('should not submit if form is invalid and mark form as touched', () => {
       component.companyForm.controls['company_name'].setValue(''); // Make form invalid
-      const markSpy = jest.spyOn(component.companyForm, 'markAllAsTouched');
+      const markSpy = vi.spyOn(component.companyForm, 'markAllAsTouched');
       component.onSubmit();
       expect(companyService.createCompany).not.toHaveBeenCalled();
       expect(markSpy).toHaveBeenCalled();

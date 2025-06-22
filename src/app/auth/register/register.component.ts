@@ -14,6 +14,7 @@ import {
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http'; // Correctly placed import
 
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -24,7 +25,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { AuthService } from '../auth.service';
-import { TermsAndConditionsComponent } from '@/app/shared/components/terms-and-conditions/terms-and-conditions.component';
+import { TermsAndConditionsComponent } from '@/shared/components/terms-and-conditions/terms-and-conditions.component';
 
 // Password Complexity Rules
 export const passwordComplexityRules = {
@@ -82,7 +83,6 @@ function passwordComplexityValidator(
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-
 @Component({
   selector: 'app-register',
   imports: [
@@ -100,24 +100,6 @@ function passwordComplexityValidator(
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class RegisterComponent {
-  private fb = inject(FormBuilder);
-  private authService = inject(AuthService);
-  private router = inject(Router);
-  private dialog = inject(MatDialog);
-
-  hidePassword = signal(true);
-  registrationError = signal<string | null>(null);
-import { HttpErrorResponse } from '@angular/common/http'; // Import HttpErrorResponse
-
-// ... (other imports remain the same)
-
-// ... (password complexity rules and validators remain the same)
-
-
-@Component({
-  // ... (selector, imports, etc. remain the same)
 })
 export class RegisterComponent {
   private fb = inject(FormBuilder);

@@ -8,7 +8,9 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { RegisterComponent, passwordComplexityRules, passwordComplexityValidator } from './register.component';
 import { AuthService } from '../auth.service';
-import { TermsAndConditionsComponent } from '@/app/shared/components/terms-and-conditions/terms-and-conditions.component';
+import { TermsAndConditionsComponent } from '@/shared/components/terms-and-conditions/terms-and-conditions.component';
+
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
 
 // Material Modules (imported by standalone RegisterComponent, but good to have for TestBed)
 import { MatCardModule } from '@angular/material/card';
@@ -19,15 +21,15 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 
 class MockAuthService {
-  register = jest.fn();
+  register = vi.fn();
 }
 
 class MockRouter {
-  navigate = jest.fn();
+  navigate = vi.fn();
 }
 
 class MockMatDialog {
-  open = jest.fn();
+  open = vi.fn();
 }
 
 describe('RegisterComponent', () => {
@@ -58,6 +60,10 @@ describe('RegisterComponent', () => {
     router = TestBed.inject(Router) as unknown as MockRouter;
     dialog = TestBed.inject(MatDialog) as unknown as MockMatDialog;
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks(); // Clear all Vitest mocks
   });
 
   it('should create', () => {

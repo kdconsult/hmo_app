@@ -7,6 +7,8 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { VerifyEmailStatusComponent } from './verify-email-status.component';
 import { AuthService } from '../auth.service';
 
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -14,11 +16,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 class MockAuthService {
-  verifyEmailToken = jest.fn();
+  verifyEmailToken = vi.fn();
 }
 
 class MockRouter {
-  navigate = jest.fn();
+  navigate = vi.fn();
 }
 
 describe('VerifyEmailStatusComponent', () => {
@@ -55,6 +57,11 @@ describe('VerifyEmailStatusComponent', () => {
     router = TestBed.inject(Router) as unknown as MockRouter;
     activatedRoute = TestBed.inject(ActivatedRoute);
   };
+
+  // Add afterEach to clear mocks
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('should create', () => {
     setupComponent({ token: mockToken });

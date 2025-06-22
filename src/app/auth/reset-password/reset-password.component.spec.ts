@@ -9,6 +9,8 @@ import { ResetPasswordComponent } from './reset-password.component';
 import { AuthService } from '../auth.service';
 // Assuming password complexity constants/validators are correctly imported or mocked if needed
 // For this test, we'll rely on the component's own import of them.
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+
 
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
@@ -19,11 +21,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
 class MockAuthService {
-  resetPassword = jest.fn();
+  resetPassword = vi.fn();
 }
 
 class MockRouter {
-  navigate = jest.fn();
+  navigate = vi.fn();
 }
 
 describe('ResetPasswordComponent', () => {
@@ -59,6 +61,10 @@ describe('ResetPasswordComponent', () => {
     authService = TestBed.inject(AuthService) as unknown as MockAuthService;
     router = TestBed.inject(Router) as unknown as MockRouter;
   };
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('should create', () => {
     setupComponent({ token: mockToken });

@@ -14,16 +14,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'; // Added
 
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+
 // Mock AuthService
 class MockAuthService {
-  login = jest.fn();
-  resendVerification = jest.fn();
-  // Add other methods if they were used directly by LoginComponent, but they aren't
+  login = vi.fn();
+  resendVerification = vi.fn();
 }
 
 // Mock Router
 class MockRouter {
-  navigate = jest.fn();
+  navigate = vi.fn();
 }
 
 describe('LoginComponent', () => {
@@ -57,6 +58,10 @@ describe('LoginComponent', () => {
     authService = TestBed.inject(AuthService) as unknown as MockAuthService;
     router = TestBed.inject(Router) as unknown as MockRouter;
     fixture.detectChanges(); // Initial data binding
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks(); // Clear all Vitest mocks after each test
   });
 
   it('should create', () => {

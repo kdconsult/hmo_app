@@ -11,9 +11,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
 
-import { LookupService, Country, CompanyType, LocaleInfo, Currency } from '@/app/core/services/lookup.service';
-import { CompanyService, CompanyCreationData } from '@/app/core/services/company.service';
-import { AuthService } from '@/app/auth/auth.service'; // For updating token if needed
+import { LookupService, Country, CompanyType, LocaleInfo, Currency } from '@/core/services/lookup.service';
+import { CompanyService, CompanyCreationData } from '@/core/services/company.service';
+import { AuthService } from '@/auth/auth.service'; // For updating token if needed
 
 import { Observable, forkJoin } from 'rxjs';
 import { finalize, tap } from 'rxjs/operators';

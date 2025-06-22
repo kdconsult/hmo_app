@@ -4,7 +4,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, tap, BehaviorSubject, throwError } from 'rxjs'; // Added BehaviorSubject and throwError
 import { jwtDecode, JwtPayload } from 'jwt-decode'; // Import JwtPayload
 import { BYPASS_AUTH_INTERCEPTOR } from './auth.interceptor';
-import { environment } from '@/environments/environment';
+import { environment } from '@/environments/environment'; // Standardized path alias
 import { Router } from '@angular/router';
 
 @Injectable({

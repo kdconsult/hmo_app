@@ -8,6 +8,8 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RequestPasswordResetComponent } from './request-password-reset.component';
 import { AuthService } from '../auth.service';
 
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -17,7 +19,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
 class MockAuthService {
-  requestPasswordReset = jest.fn();
+  requestPasswordReset = vi.fn();
 }
 
 class MockRouter {} // Minimal mock as router isn't actively used by this component for navigation
@@ -45,6 +47,10 @@ describe('RequestPasswordResetComponent', () => {
     component = fixture.componentInstance;
     authService = TestBed.inject(AuthService) as unknown as MockAuthService;
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it('should create', () => {
@@ -92,7 +98,7 @@ describe('RequestPasswordResetComponent', () => {
     it('should call authService.requestPasswordReset and display generic success message even on API error', fakeAsync(() => {
       const errorResponse = new HttpErrorResponse({ status: 500, error: { message: 'Server error' } });
       authService.requestPasswordReset.mockReturnValue(throwError(() => errorResponse));
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {}); // Suppress console.error for this test
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}); // Suppress console.error for this test
 
       component.onSubmit();
       tick();

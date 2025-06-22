@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '@/environments/environment';
+import { environment } from '@/environments/environment'; // Standardized path alias
 
 // Define an interface for the company creation payload based on BLA 3.7.2
 export interface CompanyCreationData {
