@@ -20,6 +20,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import { AuthService } from '../auth.service';
 
@@ -43,6 +44,7 @@ function passwordsMatchValidator(
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatCheckboxModule,
   ],
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss',
@@ -59,10 +61,12 @@ export class RegisterComponent {
 
   registerForm = this.fb.group(
     {
-      name: ['', [Validators.required]],
+      first_name: ['', [Validators.required]],
+      last_name: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]],
+      terms_agreed: [false, [Validators.requiredTrue]],
     },
     { validators: passwordsMatchValidator }
   );
@@ -76,11 +80,12 @@ export class RegisterComponent {
     this.registrationError.set(null);
 
     // We can omit confirmPassword from the value sent to the backend
-    const { name, email, password } = this.registerForm.getRawValue();
+    const { first_name, last_name, email, password, terms_agreed } =
+      this.registerForm.getRawValue();
 
-    if (name && email && password) {
+    if (first_name && last_name && email && password && terms_agreed) {
       this.authService
-        .register({ name, email, password })
+        .register({ first_name, last_name, email, password, terms_agreed })
         .pipe(finalize(() => this.isSubmitting.set(false)))
         .subscribe({
           next: () => this.router.navigate(['/dashboard']),

@@ -9,12 +9,25 @@
           <mat-label>Full Name</mat-label>
           <input
             matInput
-            formControlName="name"
+            formControlName="first_name"
             type="text"
-            placeholder="Enter your full name"
+            placeholder="Enter your first name"
           />
           @if (registerForm.get('name')?.hasError('required')) {
           <mat-error>Name is required</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Last Name</mat-label>
+          <input
+            matInput
+            formControlName="last_name"
+            type="text"
+            placeholder="Enter your last name"
+          />
+          @if (registerForm.get('last_name')?.hasError('required')) {
+          <mat-error>Last name is required</mat-error>
           }
         </mat-form-field>
 
@@ -42,6 +55,7 @@
             [type]="hidePassword() ? 'password' : 'text'"
           />
           <button
+            type="button"
             mat-icon-button
             matSuffix
             (click)="hidePassword.set(!hidePassword())"
@@ -73,6 +87,11 @@
           <mat-error>Password confirmation is required</mat-error>
           }
         </mat-form-field>
+
+        <mat-checkbox formControlName="terms_agreed">
+          I agree to the <a href="#">Terms of Service</a> and
+          <a href="#">Privacy Policy</a>
+        </mat-checkbox>
 
         @if(registrationError()) {
         <div class="register-error-message">

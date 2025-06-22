@@ -19,13 +19,13 @@ export class AuthService {
 
   login(credentials: { email: string; password: string }): Observable<any> {
     return this.http
-      .post<any>(`${this.apiUrl}/login`, credentials)
-      .pipe(tap((response) => this.setToken(response.token)));
+      .post<any>(`${this.apiUrl}/auth/login`, credentials)
+      .pipe(tap((response) => this.setToken(response.accessToken)));
   }
 
   register(userInfo: any): Observable<any> {
     return this.http
-      .post<any>(`${this.apiUrl}/register`, userInfo)
+      .post<any>(`${this.apiUrl}/auth/register`, userInfo)
       .pipe(tap((response) => this.setToken(response.token)));
   }
 
