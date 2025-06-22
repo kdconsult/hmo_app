@@ -51,14 +51,42 @@
         </div>
         }
 
+        @if(showResendVerification()) {
+        <div class="resend-verification-actions">
+          <button
+            mat-stroked-button
+            color="accent"
+            (click)="onResendVerificationEmail()"
+            [disabled]="isResendingVerification()"
+            class="full-width resend-button"
+          >
+            @if(isResendingVerification()){
+            <mat-spinner [diameter]="20"></mat-spinner>
+            <span>Sending...</span>
+            } @else {
+            <span>Resend Verification Email</span>
+            }
+          </button>
+        </div>
+        } @if(resendVerificationMessage()) {
+        <div
+          class="verification-message"
+          [class.success]="!resendVerificationMessage()?.startsWith('Failed') && !resendVerificationMessage()?.startsWith('Please enter')"
+          [class.error]="resendVerificationMessage()?.startsWith('Failed') || resendVerificationMessage()?.startsWith('Please enter')"
+        >
+          {{ resendVerificationMessage() }}
+        </div>
+        }
+
         <button
           mat-raised-button
           color="primary"
-          class="full-width"
+          class="full-width login-button"
           type="submit"
           [disabled]="isSubmitting()"
         >
           @if(isSubmitting()) {
+          <mat-spinner [diameter]="20"></mat-spinner>
           <span>Logging in...</span>
           } @else {
           <span>Login</span>
@@ -66,7 +94,10 @@
         </button>
       </form>
     </mat-card-content>
-    <mat-card-actions>
+    <mat-card-actions class="login-actions">
+      <a routerLink="/request-password-reset" class="forgot-password-link"
+        >Forgot Password?</a
+      >
       <a routerLink="/register">Don't have an account? Register</a>
     </mat-card-actions>
   </mat-card>

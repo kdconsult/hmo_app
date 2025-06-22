@@ -1,0 +1,40 @@
+<div class="verify-email-container">
+  <mat-card class="verify-email-card">
+    <mat-card-header>
+      <mat-card-title>Email Verification</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (isLoading()) {
+      <div class="loading-container">
+        <mat-progress-spinner
+          mode="indeterminate"
+          [diameter]="50"
+        ></mat-progress-spinner>
+        <p>Verifying your email...</p>
+      </div>
+      } @else {
+        @if (verificationStatus() === 'success') {
+        <div class="status-container success">
+          <mat-icon color="primary">check_circle</mat-icon>
+          <h2>Verification Successful!</h2>
+          <p>{{ message() }}</p>
+          <button mat-raised-button color="primary" (click)="navigateToLogin()">
+            Go to Login
+          </button>
+        </div>
+        }
+        @if (verificationStatus() === 'error') {
+        <div class="status-container error">
+          <mat-icon color="warn">error</mat-icon>
+          <h2>Verification Failed</h2>
+          <p>{{ message() }}</p>
+          <button mat-stroked-button color="primary" (click)="navigateToLogin()">
+            Go to Login
+          </button>
+          <!-- Optionally, add a button to resend verification if applicable from here -->
+        </div>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

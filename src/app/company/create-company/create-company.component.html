@@ -1,0 +1,170 @@
+<div class="create-company-container">
+  <mat-card class="create-company-card">
+    <mat-card-header>
+      <mat-card-title>Create Your Company</mat-card-title>
+      <mat-card-subtitle
+        >Let's set up your primary company in Hyper M
+        v2.</mat-card-subtitle
+      >
+    </mat-card-header>
+    <mat-card-content>
+      @if (isLoadingLookups()) {
+      <div class="loading-indicator">
+        <mat-progress-spinner
+          mode="indeterminate"
+          [diameter]="50"
+        ></mat-progress-spinner>
+        <p>Loading setup data...</p>
+      </div>
+      } @else {
+      <form [formGroup]="companyForm" (ngSubmit)="onSubmit()">
+        <!-- Company Name -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Company Name</mat-label>
+          <input
+            matInput
+            formControlName="company_name"
+            placeholder="Your Company Ltd."
+          />
+          @if (companyForm.get('company_name')?.hasError('required') && companyForm.get('company_name')?.touched) {
+          <mat-error>Company name is required</mat-error>
+          }
+          @if (companyForm.get('company_name')?.hasError('minlength') || companyForm.get('company_name')?.hasError('maxlength')) {
+          <mat-error>Company name must be between 3 and 100 characters</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Company EIK -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Company EIK / VAT ID</mat-label>
+          <input
+            matInput
+            formControlName="company_eik"
+            placeholder="e.g., 123456789"
+          />
+          @if (companyForm.get('company_eik')?.hasError('required') && companyForm.get('company_eik')?.touched) {
+          <mat-error>Company EIK/VAT ID is required</mat-error>
+          }
+          @if (companyForm.get('company_eik')?.hasError('pattern') && companyForm.get('company_eik')?.touched) {
+          <mat-error>Please enter a valid EIK/VAT ID (9-13 digits)</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Country -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Country of Registration</mat-label>
+          <mat-select formControlName="company_country_id">
+            @for(country of countries$ | async; track country.id) {
+            <mat-option [value]="country.id">{{ country.name }}</mat-option>
+            }
+          </mat-select>
+          @if (companyForm.get('company_country_id')?.hasError('required') && companyForm.get('company_country_id')?.touched) {
+          <mat-error>Country is required</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Company Type -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Company Type</mat-label>
+          <mat-select formControlName="company_type_id">
+             @for(type of companyTypes$ | async; track type.id) {
+            <mat-option [value]="type.id">{{ type.name }}</mat-option>
+            }
+          </mat-select>
+          @if (companyForm.get('company_type_id')?.hasError('required') && companyForm.get('company_type_id')?.touched) {
+          <mat-error>Company type is required</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Default Locale -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Default Language (Locale)</mat-label>
+          <mat-select formControlName="company_default_locale_id">
+            @for(locale of locales$ | async; track locale.id) {
+            <mat-option [value]="locale.id"
+              >{{ locale.name }} ({{ locale.code }})</mat-option
+            >
+            }
+          </mat-select>
+          @if (companyForm.get('company_default_locale_id')?.hasError('required') && companyForm.get('company_default_locale_id')?.touched) {
+          <mat-error>Default language is required</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Default Currency -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Default Currency</mat-label>
+          <mat-select formControlName="company_default_currency_id">
+            @for(currency of currencies$ | async; track currency.id) {
+            <mat-option [value]="currency.id"
+              >{{ currency.name }} ({{ currency.code }})</mat-option
+            >
+            }
+          </mat-select>
+          @if (companyForm.get('company_default_currency_id')?.hasError('required') && companyForm.get('company_default_currency_id')?.touched) {
+          <mat-error>Default currency is required</mat-error>
+          }
+        </mat-form-field>
+
+        <h3 class="optional-title">Optional Details</h3>
+        <!-- Address Line 1 -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Address Line 1</mat-label>
+          <input matInput formControlName="company_address_line1" placeholder="Street and number"/>
+            @if (companyForm.get('company_address_line1')?.hasError('maxlength') && companyForm.get('company_address_line1')?.touched) {
+            <mat-error>Address too long (max 255 chars)</mat-error>
+            }
+        </mat-form-field>
+
+        <!-- City -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>City</mat-label>
+          <input matInput formControlName="company_city" placeholder="e.g., Sofia"/>
+           @if (companyForm.get('company_city')?.hasError('maxlength') && companyForm.get('company_city')?.touched) {
+            <mat-error>City name too long (max 100 chars)</mat-error>
+            }
+        </mat-form-field>
+
+
+        @if (errorMessage()) {
+        <div class="message error-message">
+           <mat-icon>error</mat-icon>
+          <span>{{ errorMessage() }}</span>
+        </div>
+        }
+        @if (successMessage()) {
+        <div class="message success-message">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ successMessage() }}</span>
+        </div>
+        }
+        @if (!companyForm.disabled) {
+        <button
+          mat-raised-button
+          color="primary"
+          class="full-width submit-button"
+          type="submit"
+          [disabled]="isSubmitting() || companyForm.disabled"
+        >
+          @if (isSubmitting()) {
+          <mat-progress-spinner
+            [diameter]="20"
+            mode="indeterminate"
+          ></mat-progress-spinner>
+          <span>Creating Company...</span>
+          } @else {
+          <span>Create Company</span>
+          }
+        </button>
+        }
+      </form>
+      }
+    </mat-card-content>
+    @if (companyForm.disabled && errorMessage() && !isLoadingLookups()) {
+       <mat-card-actions class="form-disabled-actions">
+         <button mat-stroked-button (click)="router.navigate(['/dashboard'])">Go to Dashboard</button>
+         <button mat-stroked-button color="warn" (click)="authService.logout()">Logout</button>
+       </mat-card-actions>
+    }
+  </mat-card>
+</div>

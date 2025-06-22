@@ -19,14 +19,77 @@
   width: 100%;
 }
 
-.login-error-message {
-  color: var(--mat-form-field-error-text-color, #f44336);
-  padding: 10px 0;
-  text-align: center;
+.login-button {
+  margin-top: 10px;
+  mat-spinner {
+    display: inline-block;
+    margin-right: 8px;
+  }
 }
 
-mat-card-actions {
+.login-error-message {
+  color: var(--mat-form-field-error-text-color, #f44336);
+  padding: 8px 0;
+  text-align: center;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+.resend-verification-actions {
+  margin-top: 15px;
+  margin-bottom: 10px;
+  .resend-button {
+    width: 100%;
+    mat-spinner {
+      display: inline-block;
+      margin-right: 8px;
+    }
+  }
+}
+
+.verification-message {
+  padding: 8px 0;
+  text-align: center;
+  font-size: 0.9em;
+  margin-top: 10px;
+  &.success {
+    color: green; // Consider using theme success color
+  }
+  &.error {
+    color: var(--mat-form-field-error-text-color, #f44336);
+  }
+}
+
+mat-card-actions.login-actions {
   display: flex;
-  justify-content: center;
-  padding-bottom: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px 16px; // Adjusted padding
+  margin-top: 10px;
+  flex-wrap: wrap;
+
+  a {
+    text-decoration: none;
+    color: var(--mat-primary-text-color, #007bff); // Using a generic primary text color fallback
+    font-size: 0.9em;
+    padding: 5px; // Add some padding for easier clicking
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .forgot-password-link {
+    // No specific style needed if space-between is enough
+  }
+}
+
+// Ensure the default mat-card-actions styling doesn't conflict if it's too generic
+// This might not be necessary if the above .login-actions is specific enough.
+mat-card-actions {
+  &:not(.login-actions) { // Apply to default mat-card-actions if any, but not our specific one
+    display: flex;
+    justify-content: center;
+    padding-bottom: 16px;
+  }
 }
