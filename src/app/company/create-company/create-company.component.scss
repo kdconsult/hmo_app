@@ -1,0 +1,93 @@
+:host {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; // Align to top for longer forms
+  min-height: calc(100vh - 64px); // Adjust if header height is different
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto; // Allow scrolling for the host if content overflows
+}
+
+.create-company-card {
+  max-width: 600px;
+  width: 100%;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+  p {
+    font-size: 1.1em;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.optional-title {
+    font-size: 1.1em;
+    color: var(--mat-grey-700, #616161);
+    margin-top: 24px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--mat-grey-300, #e0e0e0);
+    padding-bottom: 8px;
+}
+
+
+.submit-button {
+  margin-top: 20px;
+  mat-progress-spinner {
+    display: inline-block;
+    margin-right: 8px;
+  }
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  margin: 20px 0;
+  border-radius: 4px;
+  font-size: 0.95em;
+  line-height: 1.4;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0; // Prevent icon from shrinking
+  }
+}
+
+.success-message {
+  background-color: var(--mat-green-50, #e8f5e9);
+  color: var(--mat-green-700, #388e3c);
+  border: 1px solid var(--mat-green-200, #a5d6a7);
+  mat-icon {
+    color: var(--mat-green-700, #388e3c);
+  }
+}
+
+.error-message {
+  background-color: var(--mat-red-50, #ffebee);
+  color: var(--mat-red-700, #d32f2f);
+  border: 1px solid var(--mat-red-200, #ef9a9a);
+  mat-icon {
+    color: var(--mat-red-700, #d32f2f);
+  }
+}
+
+.form-disabled-actions {
+    display: flex;
+    justify-content: space-around;
+    padding: 16px;
+    margin-top: 10px;
+}

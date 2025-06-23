@@ -13,8 +13,8 @@
             type="text"
             placeholder="Enter your first name"
           />
-          @if (registerForm.get('name')?.hasError('required')) {
-          <mat-error>Name is required</mat-error>
+          @if (registerForm.get('first_name')?.hasError('required')) {
+          <mat-error>First name is required</mat-error>
           }
         </mat-form-field>
 
@@ -68,10 +68,38 @@
           </button>
           @if (registerForm.get('password')?.hasError('required')) {
           <mat-error>Password is required</mat-error>
-          } @if (registerForm.get('password')?.hasError('minlength')) {
-          <mat-error>Password must be at least 6 characters long</mat-error>
           }
+          <!-- Password Complexity Errors -->
+          @if (registerForm.get('password')?.hasError('passwordMinLength')) {
+          <mat-error>{{passwordComplexityMessages.minLength}}</mat-error>
+          }
+          @if (registerForm.get('password')?.hasError('passwordUppercase')) {
+          <mat-error>{{passwordComplexityMessages.requireUppercase}}</mat-error>
+          }
+          @if (registerForm.get('password')?.hasError('passwordLowercase')) {
+          <mat-error>{{passwordComplexityMessages.requireLowercase}}</mat-error>
+          }
+          @if (registerForm.get('password')?.hasError('passwordNumeric')) {
+          <mat-error>{{passwordComplexityMessages.requireNumeric}}</mat-error>
+          }
+          @if (registerForm.get('password')?.hasError('passwordSpecialChar')) {
+          <mat-error>{{passwordComplexityMessages.requireSpecialChar}}</mat-error>
+          }
+
+          <mat-hint align="start">
+            <div class="password-rules">
+              <div>Password must contain:</div>
+              <ul>
+                <li [class.valid]="!registerForm.get('password')?.hasError('passwordMinLength') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.minLength}}</li>
+                <li [class.valid]="!registerForm.get('password')?.hasError('passwordUppercase') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireUppercase}}</li>
+                <li [class.valid]="!registerForm.get('password')?.hasError('passwordLowercase') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireLowercase}}</li>
+                <li [class.valid]="!registerForm.get('password')?.hasError('passwordNumeric') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireNumeric}}</li>
+                <li [class.valid]="!registerForm.get('password')?.hasError('passwordSpecialChar') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireSpecialChar}}</li>
+              </ul>
+            </div>
+          </mat-hint>
         </mat-form-field>
+
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Confirm Password</mat-label>
@@ -88,14 +116,28 @@
           }
         </mat-form-field>
 
-        <mat-checkbox formControlName="terms_agreed">
-          I agree to the <a href="#">Terms of Service</a> and
-          <a href="#">Privacy Policy</a>
-        </mat-checkbox>
+        <div class="terms-agreement">
+          <mat-checkbox formControlName="terms_agreed" id="terms-checkbox">
+            I agree to the
+            <a href="#" (click)="openTermsDialog($event)">Terms of Service</a> and
+            <a href="#" (click)="openTermsDialog($event)">Privacy Policy</a>
+          </mat-checkbox>
+          @if (registerForm.get('terms_agreed')?.hasError('requiredTrue') && registerForm.get('terms_agreed')?.touched) {
+            <mat-error class="terms-error">You must agree to the terms and conditions</mat-error>
+          }
+        </div>
+
 
         @if(registrationError()) {
-        <div class="register-error-message">
+        <div class="message register-error-message">
           {{ registrationError() }}
+        </div>
+        }
+
+        @if(registrationSuccessMessage()) {
+        <div class="message register-success-message">
+          {{ registrationSuccessMessage() }}
+          <p>You can now <a routerLink="/login">Login</a> after verifying your email.</p>
         </div>
         }
 

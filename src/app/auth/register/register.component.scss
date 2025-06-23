@@ -30,3 +30,78 @@ mat-card-actions {
   justify-content: center;
   padding-bottom: 16px;
 }
+
+.terms-agreement {
+  margin: 16px 0;
+  font-size: 0.9em;
+
+  a {
+    color: var(--mat-primary-text-color, #007bff);
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  .terms-error {
+    display: block; // Make mat-error take full width for alignment
+    margin-top: 4px; // Add some space above the error message
+    font-size: 0.75em;
+  }
+}
+
+.password-rules {
+  font-size: 0.8em;
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0 0 0;
+    li {
+      color: var(--mat-form-field-error-text-color, #f44336); // Default to error color
+      &.valid {
+        color: green; // Or theme success color
+      }
+    }
+  }
+}
+
+// Adjust margin for mat-form-field that has mat-hint for password rules
+// :host ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+//   margin-bottom: 10px; // Add some space below the hints - This might be too broad, specific hints are better.
+// }
+// Targeting specific hint for password rules if needed
+:host ::ng-deep .mat-form-field-appearance-outline .mat-mdc-form-field-subscript-wrapper {
+  margin-bottom: 10px; // Add some space below the hints
+}
+
+
+.message {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9em;
+}
+
+.register-error-message {
+  background-color: #f8d7da; // Light red
+  color: #721c24; // Dark red
+  border: 1px solid #f5c6cb;
+}
+
+.register-success-message {
+  background-color: #d4edda; // Light green
+  color: #155724; // Dark green
+  border: 1px solid #c3e6cb;
+  p {
+    margin-top: 8px;
+    font-size: 0.95em;
+    a {
+      color: #0f5132; // Slightly darker green for link
+      font-weight: bold;
+      text-decoration: none;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
