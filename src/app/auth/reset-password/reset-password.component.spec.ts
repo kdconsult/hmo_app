@@ -1,19 +1,20 @@
 import {
   ComponentFixture,
   TestBed,
-  fakeAsync,
-  tick,
+  TestBed,
 } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 import { ResetPasswordComponent } from './reset-password.component';
 import { AuthService } from '../auth.service';
 // Assuming password complexity constants/validators are correctly imported or mocked if needed
 // For this test, we'll rely on the component's own import of them.
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest'; // Import Vitest globals
 
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
@@ -23,19 +24,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
-class MockAuthService {
-  resetPassword = vi.fn();
-}
-
-class MockRouter {
-  navigate = vi.fn();
-}
-
 describe('ResetPasswordComponent', () => {
   let component: ResetPasswordComponent;
   let fixture: ComponentFixture<ResetPasswordComponent>;
-  let authService: MockAuthService;
-  let router: MockRouter;
+  let authService: AuthService; // Changed type
+  let router: Router; // Changed type
 
   const mockToken = 'test-reset-token';
 
@@ -52,8 +45,15 @@ describe('ResetPasswordComponent', () => {
         MatIconModule,
       ],
       providers: [
-        { provide: AuthService, useClass: MockAuthService },
-        { provide: Router, useClass: MockRouter },
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: AuthService,
+          useValue: {
+            resetPassword: vi.fn(),
+          },
+        },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -65,12 +65,14 @@ describe('ResetPasswordComponent', () => {
 
     fixture = TestBed.createComponent(ResetPasswordComponent);
     component = fixture.componentInstance;
-    authService = TestBed.inject(AuthService) as unknown as MockAuthService;
-    router = TestBed.inject(Router) as unknown as MockRouter;
+    authService = TestBed.inject(AuthService);
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true); // Spy on the injected router
   };
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers(); // Ensure real timers are restored after tests that use fake timers
   });
 
   it('should create', () => {
@@ -79,26 +81,28 @@ describe('ResetPasswordComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should extract token on init and enable form if token exists', fakeAsync(() => {
+  it('should extract token on init and enable form if token exists', async () => {
     setupComponent({ token: mockToken });
     fixture.detectChanges(); // ngOnInit
-    tick();
+    await fixture.whenStable();
+    fixture.detectChanges();
     expect(component['resetToken']).toBe(mockToken);
     expect(component.resetPasswordForm.enabled).toBe(true);
     expect(component.message()).toBeNull();
-  }));
+  });
 
-  it('should display error and disable form if token is missing', fakeAsync(() => {
+  it('should display error and disable form if token is missing', async () => {
     setupComponent({ token: null });
     fixture.detectChanges(); // ngOnInit
-    tick();
+    await fixture.whenStable();
+    fixture.detectChanges();
     expect(component['resetToken']).toBeNull();
     expect(component.resetPasswordForm.disabled).toBe(true);
     expect(component.messageType()).toBe('error');
     expect(component.message()).toBe(
       'Password reset token not found or invalid. Please request a new reset link.'
     );
-  }));
+  });
 
   describe('Form Validation', () => {
     beforeEach(() => {
@@ -155,12 +159,14 @@ describe('ResetPasswordComponent', () => {
       );
     });
 
-    it('should call authService.resetPassword and navigate to login on success', fakeAsync(() => {
-      authService.resetPassword.mockReturnValue(
+    it('should call authService.resetPassword and navigate to login on success', async () => {
+      vi.useFakeTimers();
+      (authService.resetPassword as Mock).mockReturnValue(
         of({ message: 'Password reset' })
       );
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(authService.resetPassword).toHaveBeenCalledWith(
         mockToken,
@@ -172,20 +178,24 @@ describe('ResetPasswordComponent', () => {
       );
       expect(component.resetPasswordForm.disabled).toBe(true);
 
-      tick(3000); // For setTimeout
+      vi.advanceTimersByTime(3000); // For setTimeout
+      await fixture.whenStable(); // Allow promises from setTimeout to resolve
+      fixture.detectChanges();
       expect(router.navigate).toHaveBeenCalledWith(['/login']);
-    }));
+      vi.useRealTimers(); // Clean up fake timers
+    });
 
-    it('should display error message on API failure (e.g., 400 invalid token)', fakeAsync(() => {
+    it('should display error message on API failure (e.g., 400 invalid token)', async () => {
       const errorResponse = new HttpErrorResponse({
         status: 400,
         error: { message: 'Token invalid' },
       });
-      authService.resetPassword.mockReturnValue(
+      (authService.resetPassword as Mock).mockReturnValue(
         throwError(() => errorResponse)
       );
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(authService.resetPassword).toHaveBeenCalledWith(
         mockToken,
@@ -196,26 +206,28 @@ describe('ResetPasswordComponent', () => {
         'Invalid or expired reset token. Please try requesting a new link.'
       );
       expect(router.navigate).not.toHaveBeenCalled();
-    }));
+    });
 
-    it('should display generic error message for other API failures', fakeAsync(() => {
+    it('should display generic error message for other API failures', async () => {
       const errorResponse = new HttpErrorResponse({ status: 500 });
-      authService.resetPassword.mockReturnValue(
+      (authService.resetPassword as Mock).mockReturnValue(
         throwError(() => errorResponse)
       );
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
       expect(component.message()).toBe('Failed to reset password.');
-    }));
+    });
 
-    it('should set isLoading to true during submission and false after', fakeAsync(() => {
-      authService.resetPassword.mockReturnValue(of({}));
+    it('should set isLoading to true during submission and false after', async () => {
+      (authService.resetPassword as Mock).mockReturnValue(of({}));
       expect(component.isLoading()).toBe(false);
       component.onSubmit();
       expect(component.isLoading()).toBe(true);
-      tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
       expect(component.isLoading()).toBe(false);
-    }));
+    });
 
     it('should not submit if form is invalid and mark form as touched', () => {
       component.resetPasswordForm.controls['newPassword'].setValue('');

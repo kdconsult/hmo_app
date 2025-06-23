@@ -1,8 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpTestingController } from '@angular/common/http/testing';
-import { RouterTestingModule } from '@angular/router/testing';
-import { Router } from '@angular/router';
-import { PLATFORM_ID } from '@angular/core';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { provideHttpClient, HttpContextToken } from '@angular/common/http';
+import { Router, provideRouter } from '@angular/router';
+import { PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
 import { filter, take } from 'rxjs/operators'; // Import filter and take
 
 import { AuthService } from './auth.service';
@@ -11,7 +14,6 @@ import { jwtDecode, JwtPayload } from 'jwt-decode';
 import { firstValueFrom, lastValueFrom, Observable } from 'rxjs';
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
-import { HttpContextToken } from '@angular/common/http';
 
 // Mock jwt-decode using Vitest's mocking
 vi.mock('jwt-decode', () => ({
@@ -36,8 +38,14 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [RouterTestingModule.withRoutes([])],
-      providers: [AuthService, { provide: PLATFORM_ID, useValue: 'browser' }],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        AuthService,
+        { provide: PLATFORM_ID, useValue: 'browser' },
+      ],
     });
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);

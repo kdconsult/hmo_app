@@ -1,18 +1,19 @@
 import {
   ComponentFixture,
   TestBed,
-  fakeAsync,
-  tick,
+  TestBed,
 } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router'; // Though not used for navigation, good for consistency
+import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 import { RequestPasswordResetComponent } from './request-password-reset.component';
 import { AuthService } from '../auth.service';
 
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest'; // Import Vitest globals
 
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
@@ -22,16 +23,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
-class MockAuthService {
-  requestPasswordReset = vi.fn();
-}
-
-class MockRouter {} // Minimal mock as router isn't actively used by this component for navigation
-
 describe('RequestPasswordResetComponent', () => {
   let component: RequestPasswordResetComponent;
   let fixture: ComponentFixture<RequestPasswordResetComponent>;
-  let authService: MockAuthService;
+  let authService: AuthService; // Changed type
+  let router: Router; // Added router
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -46,14 +42,22 @@ describe('RequestPasswordResetComponent', () => {
         MatIconModule,
       ],
       providers: [
-        { provide: AuthService, useClass: MockAuthService },
-        { provide: Router, useClass: MockRouter }, // Provide mock even if not heavily used
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: AuthService,
+          useValue: {
+            requestPasswordReset: vi.fn(),
+          },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RequestPasswordResetComponent);
     component = fixture.componentInstance;
-    authService = TestBed.inject(AuthService) as unknown as MockAuthService;
+    authService = TestBed.inject(AuthService);
+    router = TestBed.inject(Router); // Inject router
     fixture.detectChanges();
   });
 
@@ -92,12 +96,13 @@ describe('RequestPasswordResetComponent', () => {
       component.requestResetForm.controls['email'].setValue(testEmail);
     });
 
-    it('should call authService.requestPasswordReset and display generic success message on API success', fakeAsync(() => {
-      authService.requestPasswordReset.mockReturnValue(
+    it('should call authService.requestPasswordReset and display generic success message on API success', async () => {
+      (authService.requestPasswordReset as Mock).mockReturnValue(
         of({ message: 'Reset link sent' })
       );
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(authService.requestPasswordReset).toHaveBeenCalledWith(testEmail);
       expect(component.messageType()).toBe('success');
@@ -105,14 +110,14 @@ describe('RequestPasswordResetComponent', () => {
         `If an account exists for ${testEmail}, a password reset link has been sent. Please check your email.`
       );
       expect(component.requestResetForm.controls['email'].value).toBeNull(); // Form should be reset
-    }));
+    });
 
-    it('should call authService.requestPasswordReset and display generic success message even on API error', fakeAsync(() => {
+    it('should call authService.requestPasswordReset and display generic success message even on API error', async () => {
       const errorResponse = new HttpErrorResponse({
         status: 500,
         error: { message: 'Server error' },
       });
-      authService.requestPasswordReset.mockReturnValue(
+      (authService.requestPasswordReset as Mock).mockReturnValue(
         throwError(() => errorResponse)
       );
       const consoleErrorSpy = vi
@@ -120,7 +125,8 @@ describe('RequestPasswordResetComponent', () => {
         .mockImplementation(() => {}); // Suppress console.error for this test
 
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(authService.requestPasswordReset).toHaveBeenCalledWith(testEmail);
       expect(component.messageType()).toBe('success'); // Still success as per BLA
@@ -130,16 +136,17 @@ describe('RequestPasswordResetComponent', () => {
       expect(component.requestResetForm.controls['email'].value).toBeNull(); // Form should be reset
       expect(consoleErrorSpy).toHaveBeenCalled(); // Check that the error was logged
       consoleErrorSpy.mockRestore();
-    }));
+    });
 
-    it('should set isLoading to true during submission and false after', fakeAsync(() => {
-      authService.requestPasswordReset.mockReturnValue(of({}));
+    it('should set isLoading to true during submission and false after', async () => {
+      (authService.requestPasswordReset as Mock).mockReturnValue(of({}));
       expect(component.isLoading()).toBe(false);
       component.onSubmit();
       expect(component.isLoading()).toBe(true);
-      tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
       expect(component.isLoading()).toBe(false);
-    }));
+    });
 
     it('should not submit if form is invalid and mark form as touched', () => {
       component.requestResetForm.controls['email'].setValue('');

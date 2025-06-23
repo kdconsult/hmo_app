@@ -1,5 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { describe, it, expect, beforeEach } from 'vitest'; // Added Vitest globals
 
@@ -7,7 +8,7 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideZonelessChangeDetection()], // Zoneless provider was here
+      providers: [provideZonelessChangeDetection(), provideRouter([])], // Zoneless provider was here
     }).compileComponents();
   });
 
