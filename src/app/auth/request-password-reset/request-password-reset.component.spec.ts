@@ -1,11 +1,10 @@
 import {
   ComponentFixture,
   TestBed,
-  TestBed,
 } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -139,13 +138,21 @@ describe('RequestPasswordResetComponent', () => {
     });
 
     it('should set isLoading to true during submission and false after', async () => {
-      (authService.requestPasswordReset as Mock).mockReturnValue(of({}));
+      const resetSubject = new Subject<void>();
+      (authService.requestPasswordReset as Mock).mockReturnValue(resetSubject.asObservable());
+
       expect(component.isLoading()).toBe(false);
-      component.onSubmit();
-      expect(component.isLoading()).toBe(true);
-      await fixture.whenStable();
-      fixture.detectChanges();
-      expect(component.isLoading()).toBe(false);
+      component.onSubmit(); // This should set isLoading to true
+
+      expect(component.isLoading()).toBe(true); // Assert before observable completes
+
+      resetSubject.next(); // Simulate successful observable completion
+      resetSubject.complete();
+
+      await fixture.whenStable(); // Wait for finalize operator and other microtasks
+      fixture.detectChanges(); // Update view with final state
+
+      expect(component.isLoading()).toBe(false); // Assert final state
     });
 
     it('should not submit if form is invalid and mark form as touched', () => {

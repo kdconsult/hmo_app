@@ -16,17 +16,15 @@ export default defineConfig({
     include: ['src/**/*.spec.ts'],
   },
   resolve: {
-    alias: {
-      // Consistent with tsconfig.json:
-      // "baseUrl": "./src",
-      // "paths": {
-      //   "@/environments/*": ["./environments/*"],
-      //   "@/*": ["./app/*"]
-      // }
-      // Trusting Angular CLI's Vitest builder to infer paths from tsconfig.json
-      '@/*': path.resolve(__dirname, 'src/app/*'),
-      '@/auth/*': path.resolve(__dirname, 'src/app/auth/*'),
-      '@/environments/*': path.resolve(__dirname, 'src/environments/*'),
-    },
+    alias: [
+      {
+        find: '@',
+        replacement: path.resolve(__dirname, 'src/app'),
+      },
+      {
+        find: '@/environments',
+        replacement: path.resolve(__dirname, 'src/environments'),
+      },
+    ],
   },
 });

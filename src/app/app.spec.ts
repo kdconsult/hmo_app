@@ -18,9 +18,11 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', () => {
+  it('should render title', async () => { // Made async
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
+    await fixture.whenStable(); // Added await whenStable
+    // fixture.detectChanges(); // Optional second detectChanges
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('h1')?.textContent).toContain(
       'Hello, hmo_v2'

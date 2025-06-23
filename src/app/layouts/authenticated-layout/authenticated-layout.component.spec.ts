@@ -54,20 +54,23 @@ describe('AuthenticatedLayoutComponent', () => {
             observe: vi.fn().mockReturnValue(mockBreakpointState$.asObservable()),
           },
         },
-        // Router is provided by provideRouter, we will spy on its methods
+        {
+          provide: Router,
+          useValue: {
+            events: routerEvents$.asObservable(),
+            navigate: vi.fn().mockResolvedValue(true),
+          },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AuthenticatedLayoutComponent);
     component = fixture.componentInstance;
     authService = TestBed.inject(AuthService);
-    router = TestBed.inject(Router);
+    router = TestBed.inject(Router); // router will be our mock object
     breakpointObserver = TestBed.inject(BreakpointObserver);
-
-    // Spy on router navigation
-    vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    // Make router.events writable for tests
-    (router as any).events = routerEvents$.asObservable();
+    // No need to spy on router.navigate here as it's already a vi.fn() from the mock
+    // No need to cast router.events as it's controlled by routerEvents$
   });
 
   afterEach(() => {

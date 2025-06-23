@@ -186,8 +186,8 @@ export class RegisterComponent {
     }
   }
 
-  openTermsDialog(event: MouseEvent): void {
-    event.preventDefault(); // Prevent navigation if it's a real link
+  openTermsDialog(event: MouseEvent | null): void {
+    event?.preventDefault(); // Prevent navigation if it's a real link and event exists
     this.dialog.open(TermsAndConditionsComponent, {
       width: '80vw', // Responsive width
       maxWidth: '800px', // Max width

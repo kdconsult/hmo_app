@@ -16,16 +16,20 @@ import { firstValueFrom, lastValueFrom, Observable } from 'rxjs';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
 
 // Mock jwt-decode using Vitest's mocking
-vi.mock('jwt-decode', () => ({
-  jwtDecode: vi.fn(),
-}));
+// Ensure the mock is properly typed and that jwtDecode itself becomes the mock
+vi.mock('jwt-decode', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('jwt-decode')>();
+  return {
+    ...actual, // keep other exports if any, though jwt-decode likely only has default or named jwtDecode
+    jwtDecode: vi.fn(),
+  };
+});
 
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
   let router: Router;
-  // Cast to Vitest's MockedFunction type
-  let mockJwtDecode = jwtDecode as ReturnType<typeof vi.fn>;
+  // No longer need separate mockJwtDecode variable, will use (jwtDecode as Mock)
 
   const mockAccessToken = 'mock.access.token';
   const mockRefreshToken = 'mock.refresh.token';
@@ -50,7 +54,7 @@ describe('AuthService', () => {
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
-    mockJwtDecode.mockClear(); // This is fine for vi.fn() as well
+    // mockJwtDecode.mockClear(); // Removed, rely on vi.clearAllMocks() in afterEach
 
     // Spy on navigation using Vitest
     vi.spyOn(router, 'navigate').mockImplementation(() =>
@@ -64,6 +68,7 @@ describe('AuthService', () => {
   afterEach(() => {
     httpMock.verify(); // Ensure no outstanding HTTP requests
     localStorage.clear(); // Clean up localStorage after each test
+    vi.clearAllMocks(); // Clear all mocks
   });
 
   it('should be created', () => {
@@ -83,7 +88,7 @@ describe('AuthService', () => {
         exp: Date.now() / 1000 + 3600,
         sub: 'user1',
       };
-      mockJwtDecode.mockReturnValue(decodedTokenFuture);
+      (jwtDecode as Mock).mockReturnValue(decodedTokenFuture);
 
       // Use a promise to wait for isLoggedIn$ to emit true
       const loggedInPromise = firstValueFrom(
@@ -170,7 +175,7 @@ describe('AuthService', () => {
         exp: Date.now() / 1000 + 3600,
         sub: 'user1',
       };
-      mockJwtDecode.mockReturnValue(decodedTokenFuture);
+      (jwtDecode as Mock).mockReturnValue(decodedTokenFuture);
       service = TestBed.inject(AuthService); // Re-initialize to pick up localStorage in constructor for loggedInStatus
       const isLoggedInFalsePromise = firstValueFrom(
         service.isLoggedIn$.pipe(
@@ -193,7 +198,7 @@ describe('AuthService', () => {
   describe('Token Management (isLoggedIn, getUserCompanyId)', () => {
     it('isLoggedIn() should return true for a valid, non-expired token', () => {
       const futureExp = Date.now() / 1000 + 3600;
-      mockJwtDecode.mockReturnValue({ exp: futureExp } as JwtPayload);
+      (jwtDecode as Mock).mockReturnValue({ exp: futureExp } as JwtPayload);
       localStorage.setItem(accessTokenKey, mockAccessToken);
       service = TestBed.inject(AuthService); // Re-init to pick up new localStorage state for constructor
       expect(service.isLoggedIn()).toBe(true);
@@ -201,7 +206,7 @@ describe('AuthService', () => {
 
     it('isLoggedIn() should return false for an expired token', () => {
       const pastExp = Date.now() / 1000 - 3600;
-      mockJwtDecode.mockReturnValue({ exp: pastExp } as JwtPayload);
+      (jwtDecode as Mock).mockReturnValue({ exp: pastExp } as JwtPayload);
       localStorage.setItem(accessTokenKey, mockAccessToken);
       service = TestBed.inject(AuthService);
       expect(service.isLoggedIn()).toBe(false);
@@ -214,7 +219,7 @@ describe('AuthService', () => {
     });
 
     it('isLoggedIn() should return false if token is malformed (jwtDecode throws)', () => {
-      mockJwtDecode.mockImplementation(() => {
+      (jwtDecode as Mock).mockImplementation(() => {
         throw new Error('Invalid token');
       });
       localStorage.setItem(accessTokenKey, 'malformed.token');
@@ -224,7 +229,7 @@ describe('AuthService', () => {
 
     it('getUserCompanyId() should return company ID from token claims', () => {
       const companyId = 'company-123';
-      mockJwtDecode.mockReturnValue({
+      (jwtDecode as Mock).mockReturnValue({
         exp: Date.now() / 1000 + 3600,
         'https://hasura.io/jwt/claims': {
           'x-hasura-company-id': companyId,
@@ -239,7 +244,7 @@ describe('AuthService', () => {
     });
 
     it('getUserCompanyId() should return null if company ID claim is missing', () => {
-      mockJwtDecode.mockReturnValue({
+      (jwtDecode as Mock).mockReturnValue({
         exp: Date.now() / 1000 + 3600,
         'https://hasura.io/jwt/claims': {
           'x-hasura-default-role': 'user',
@@ -256,7 +261,7 @@ describe('AuthService', () => {
       const companyId = 'company-xyz';
       localStorage.setItem(accessTokenKey, mockAccessToken);
       localStorage.setItem(refreshTokenKey, mockRefreshToken);
-      mockJwtDecode.mockReturnValue({
+      (jwtDecode as Mock).mockReturnValue({
         exp: Date.now() / 1000 + 3600,
         'https://hasura.io/jwt/claims': { 'x-hasura-company-id': companyId },
       } as any);
@@ -283,7 +288,7 @@ describe('AuthService', () => {
         exp: Date.now() / 1000 + 7200,
         sub: 'user1',
       };
-      mockJwtDecode.mockReturnValue(decodedTokenFuture);
+      (jwtDecode as Mock).mockReturnValue(decodedTokenFuture);
 
       const loggedInPromise = firstValueFrom(
         service.isLoggedIn$.pipe(
@@ -313,7 +318,7 @@ describe('AuthService', () => {
       localStorage.setItem(refreshTokenKey, 'old.refresh.token');
       const newAccessToken = 'new.access.token.rotated';
       const newRefreshTokenRotated = 'new.rotated.refresh.token';
-      mockJwtDecode.mockReturnValue({
+      (jwtDecode as Mock).mockReturnValue({
         exp: Date.now() / 1000 + 7200,
       } as JwtPayload);
 
@@ -417,7 +422,7 @@ describe('AuthService', () => {
         exp: Date.now() / 1000 + 3600,
         sub: 'user1',
       };
-      mockJwtDecode.mockReturnValue(decodedTokenFuture);
+      (jwtDecode as Mock).mockReturnValue(decodedTokenFuture);
 
       const isLoggedInTruePromise = firstValueFrom(
         service.isLoggedIn$.pipe(

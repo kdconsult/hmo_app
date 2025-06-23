@@ -1,11 +1,10 @@
 import {
   ComponentFixture,
   TestBed,
-  TestBed,
 } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -186,9 +185,10 @@ describe('ResetPasswordComponent', () => {
     });
 
     it('should display error message on API failure (e.g., 400 invalid token)', async () => {
+      // To test the specific "err.status === 400" message, error.message should not be provided by the mock
       const errorResponse = new HttpErrorResponse({
         status: 400,
-        error: { message: 'Token invalid' },
+        statusText: 'Bad Request', // statusText is usually present
       });
       (authService.resetPassword as Mock).mockReturnValue(
         throwError(() => errorResponse)
@@ -220,13 +220,19 @@ describe('ResetPasswordComponent', () => {
     });
 
     it('should set isLoading to true during submission and false after', async () => {
-      (authService.resetPassword as Mock).mockReturnValue(of({}));
+      const resetSubject = new Subject<void>();
+      (authService.resetPassword as Mock).mockReturnValue(resetSubject.asObservable());
+
       expect(component.isLoading()).toBe(false);
       component.onSubmit();
-      expect(component.isLoading()).toBe(true);
-      await fixture.whenStable();
+      expect(component.isLoading()).toBe(true); // Assert before observable completes
+
+      resetSubject.next(); // Simulate successful observable completion
+      resetSubject.complete();
+
+      await fixture.whenStable(); // Wait for finalize and other microtasks
       fixture.detectChanges();
-      expect(component.isLoading()).toBe(false);
+      expect(component.isLoading()).toBe(false); // Assert final state
     });
 
     it('should not submit if form is invalid and mark form as touched', () => {

@@ -1,4 +1,21 @@
 import { vi } from 'vitest';
+import { getTestBed } from '@angular/core/testing';
+import {
+  BrowserDynamicTestingModule,
+  platformBrowserDynamicTesting,
+} from '@angular/platform-browser-dynamic/testing';
+
+// Initialize the Angular testing environment.
+// This should be done only once, before any tests run.
+getTestBed().initTestEnvironment(
+  BrowserDynamicTestingModule,
+  platformBrowserDynamicTesting(),
+  // Below are Angular v15+ default options for destroyAfterEach and configureEffects,
+  // ensure they align with your project's needs if you're on an older version or have specific requirements.
+  {
+    teardown: { destroyAfterEach: true }, // Automatically destroy components after each test
+  }
+);
 
 // Mock IntersectionObserver (useful for components using it)
 const mockIntersectionObserver = vi.fn();

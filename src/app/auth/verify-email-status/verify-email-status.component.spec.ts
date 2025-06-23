@@ -97,6 +97,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    // fixture.detectChanges(); // Removed mistaken addition here
 
     expect(component.isLoading()).toBe(false);
     expect(component.verificationStatus()).toBe('success');
@@ -124,6 +125,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges(); // Additional detectChanges
 
     expect(component.isLoading()).toBe(false);
     expect(component.verificationStatus()).toBe('error');
@@ -140,6 +142,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges(); // Additional detectChanges
     expect(component.message()).toBe(
       'Verification token not found or already used.'
     );
@@ -153,6 +156,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges(); // Additional detectChanges
     expect(component.message()).toBe('This email is already verified.');
   });
 
