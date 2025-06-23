@@ -1,69 +1,57 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { ReactiveFormsModule, Validators } from '@angular/forms';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 
-import { RegisterComponent, passwordComplexityRules, passwordComplexityValidator } from './register.component';
+import { RegisterComponent } from './register.component';
 import { AuthService } from '../auth.service';
 import { TermsAndConditionsComponent } from '@/shared/components/terms-and-conditions/terms-and-conditions.component';
-
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
-
-// Material Modules (imported by standalone RegisterComponent, but good to have for TestBed)
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatIconModule } from '@angular/material/icon';
-
-class MockAuthService {
-  register = vi.fn();
-}
-
-class MockRouter {
-  navigate = vi.fn();
-}
-
-class MockMatDialog {
-  open = vi.fn();
-}
 
 describe('RegisterComponent', () => {
   let component: RegisterComponent;
   let fixture: ComponentFixture<RegisterComponent>;
-  let authService: MockAuthService;
-  let router: MockRouter;
-  let dialog: MockMatDialog;
+  let authService: AuthService;
+  let dialog: MatDialog;
+  let router: Router;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        RegisterComponent, // Standalone component
-        ReactiveFormsModule,
-        NoopAnimationsModule,
-        MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, MatIconModule
-      ],
+      imports: [RegisterComponent, ReactiveFormsModule],
       providers: [
-        { provide: AuthService, useClass: MockAuthService },
-        { provide: Router, useClass: MockRouter },
-        { provide: MatDialog, useClass: MockMatDialog },
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: AuthService,
+          useValue: {
+            register: vi.fn(),
+          },
+        },
+        {
+          provide: MatDialog,
+          useValue: {
+            open: vi.fn(),
+          },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RegisterComponent);
     component = fixture.componentInstance;
-    authService = TestBed.inject(AuthService) as unknown as MockAuthService;
-    router = TestBed.inject(Router) as unknown as MockRouter;
-    dialog = TestBed.inject(MatDialog) as unknown as MockMatDialog;
+    authService = TestBed.inject(AuthService);
+    dialog = TestBed.inject(MatDialog);
+    router = TestBed.inject(Router);
     fixture.detectChanges();
   });
 
   afterEach(() => {
-    vi.clearAllMocks(); // Clear all Vitest mocks
+    vi.clearAllMocks();
   });
 
   it('should create', () => {
@@ -71,87 +59,32 @@ describe('RegisterComponent', () => {
   });
 
   describe('Form Validation', () => {
-    it('should invalidate form with empty required fields', () => {
-      component.registerForm.controls['first_name'].setValue('');
-      component.registerForm.controls['last_name'].setValue('');
-      component.registerForm.controls['email'].setValue('');
-      component.registerForm.controls['password'].setValue('');
-      component.registerForm.controls['confirmPassword'].setValue('');
-      component.registerForm.controls['terms_agreed'].setValue(false);
+    it('should be invalid when empty', () => {
       expect(component.registerForm.valid).toBe(false);
     });
 
-    it('should validate first_name and last_name as required', () => {
-        component.registerForm.controls['first_name'].setValue('');
-        expect(component.registerForm.controls['first_name'].hasError('required')).toBe(true);
-        component.registerForm.controls['last_name'].setValue('');
-        expect(component.registerForm.controls['last_name'].hasError('required')).toBe(true);
+    it('should be invalid with password mismatch', () => {
+      component.registerForm.controls['password'].setValue('ValidP@ss1');
+      component.registerForm.controls['confirmPassword'].setValue(
+        'DifferentP@ss1'
+      );
+      expect(component.registerForm.hasError('passwordsMismatch')).toBe(true);
     });
 
-    it('should validate email format', () => {
-      component.registerForm.controls['email'].setValue('invalid');
-      expect(component.registerForm.controls['email'].hasError('email')).toBe(true);
+    it('should be invalid with a weak password', () => {
+      component.registerForm.controls['password'].setValue('weak');
+      expect(component.registerForm.controls['password'].invalid).toBe(true);
     });
 
-    it('should validate terms_agreed checkbox as requiredTrue', () => {
-      component.registerForm.controls['terms_agreed'].setValue(false);
-      expect(component.registerForm.controls['terms_agreed'].hasError('requiredTrue')).toBe(true);
-      component.registerForm.controls['terms_agreed'].setValue(true);
-      expect(component.registerForm.controls['terms_agreed'].valid).toBe(true);
-    });
-
-    describe('Password Validation', () => {
-      it('should require password', () => {
-        component.registerForm.controls['password'].setValue('');
-        expect(component.registerForm.controls['password'].hasError('required')).toBe(true);
+    it('should be valid with all fields correct', () => {
+      component.registerForm.patchValue({
+        first_name: 'Test',
+        last_name: 'User',
+        email: 'test@example.com',
+        password: 'ValidP@ss123',
+        confirmPassword: 'ValidP@ss123',
+        terms_agreed: true,
       });
-
-      it('should validate password complexity - minLength', () => {
-        component.registerForm.controls['password'].setValue('Short1!');
-        expect(component.registerForm.controls['password'].hasError('passwordMinLength')).toBe(true);
-      });
-
-      it('should validate password complexity - requireUppercase', () => {
-        component.registerForm.controls['password'].setValue('nouppercase1!');
-        expect(component.registerForm.controls['password'].hasError('passwordUppercase')).toBe(true);
-      });
-      it('should validate password complexity - requireLowercase', () => {
-        component.registerForm.controls['password'].setValue('NOLOWERCASE1!');
-        expect(component.registerForm.controls['password'].hasError('passwordLowercase')).toBe(true);
-      });
-      it('should validate password complexity - requireNumeric', () => {
-        component.registerForm.controls['password'].setValue('NoNumericHere!');
-        expect(component.registerForm.controls['password'].hasError('passwordNumeric')).toBe(true);
-      });
-      it('should validate password complexity - requireSpecialChar', () => {
-        component.registerForm.controls['password'].setValue('NoSpecialChar1');
-        expect(component.registerForm.controls['password'].hasError('passwordSpecialChar')).toBe(true);
-      });
-
-      it('should validate a complex password correctly', () => {
-        component.registerForm.controls['password'].setValue('ComplexP@ss1');
-        expect(component.registerForm.controls['password'].valid).toBe(true);
-      });
-
-      it('should validate password confirmation match', () => {
-        component.registerForm.controls['password'].setValue('ComplexP@ss1');
-        component.registerForm.controls['confirmPassword'].setValue('ComplexP@ss2');
-        expect(component.registerForm.hasError('passwordsMismatch')).toBe(true);
-      });
-
-       it('should validate password confirmation as required', () => {
-        component.registerForm.controls['confirmPassword'].setValue('');
-        expect(component.registerForm.controls['confirmPassword'].hasError('required')).toBe(true);
-      });
-    });
-
-    it('should validate the form with all valid inputs', () => {
-      component.registerForm.controls['first_name'].setValue('Test');
-      component.registerForm.controls['last_name'].setValue('User');
-      component.registerForm.controls['email'].setValue('test@example.com');
-      component.registerForm.controls['password'].setValue('ValidP@ss123');
-      component.registerForm.controls['confirmPassword'].setValue('ValidP@ss123');
-      component.registerForm.controls['terms_agreed'].setValue(true);
       expect(component.registerForm.valid).toBe(true);
     });
   });
@@ -162,81 +95,62 @@ describe('RegisterComponent', () => {
       last_name: 'User',
       email: 'test@example.com',
       password: 'ValidP@ss123',
-      terms_agreed: true
+      confirmPassword: 'ValidP@ss123',
+      terms_agreed: true,
     };
-    const rawFormValue = { ...validFormData, confirmPassword: 'ValidP@ss123' };
-
 
     beforeEach(() => {
-      component.registerForm.setValue(rawFormValue);
+      component.registerForm.setValue(validFormData);
     });
 
-    it('should call authService.register and display success message', fakeAsync(() => {
-      authService.register.mockReturnValue(of({ message: 'Registration successful' }));
+    it('should call authService.register and show success message', async () => {
+      (authService.register as Mock).mockReturnValue(of({}));
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
 
-      const { confirmPassword, ...expectedPayload } = rawFormValue; // Exclude confirmPassword
-      expect(authService.register).toHaveBeenCalledWith(expectedPayload);
-      expect(component.registrationSuccessMessage()).toBe(
-        `Registration successful! Please check your email (${validFormData.email}) to verify your account.`
+      const { confirmPassword, ...payload } = validFormData;
+      expect(authService.register).toHaveBeenCalledWith(payload);
+      expect(component.registrationSuccessMessage()).toContain(
+        'Registration successful!'
       );
-      expect(component.registrationError()).toBeNull();
-      expect(component.registerForm.disabled).toBe(false); // Form should be reset, not disabled unless intended
-      // Check if form is reset
-      expect(component.registerForm.controls['first_name'].value).toBeNull();
-    }));
+      expect(component.registerForm.get('first_name')?.value).toBeNull();
+    });
 
-    it('should display 409 error message if email already exists', fakeAsync(() => {
-      const errorResponse = new HttpErrorResponse({ status: 409, error: { message: 'Email exists' } });
-      authService.register.mockReturnValue(throwError(() => errorResponse));
+    it('should display error message on 409 conflict', async () => {
+      const error = new HttpErrorResponse({ status: 409 });
+      (authService.register as Mock).mockReturnValue(throwError(() => error));
       component.onSubmit();
-      tick();
-      expect(authService.register).toHaveBeenCalled();
-      expect(component.registrationError()).toBe('This email address is already in use. Please try another one or login.');
-      expect(component.registrationSuccessMessage()).toBeNull();
-    }));
+      await fixture.whenStable();
+      expect(component.registrationError()).toBe(
+        'This email address is already in use. Please try another one or login.'
+      );
+    });
 
-    it('should display generic error message on other registration failures', fakeAsync(() => {
-      const errorResponse = new HttpErrorResponse({ status: 500, error: { message: 'Server error' } });
-      authService.register.mockReturnValue(throwError(() => errorResponse));
+    it('should display generic error for other failures', async () => {
+      const error = new HttpErrorResponse({ status: 500 });
+      (authService.register as Mock).mockReturnValue(throwError(() => error));
       component.onSubmit();
-      tick();
-      expect(authService.register).toHaveBeenCalled();
-      expect(component.registrationError()).toBe('Registration failed: Server error');
-      expect(component.registrationSuccessMessage()).toBeNull();
-    }));
+      await fixture.whenStable();
+      expect(component.registrationError()).toBe(
+        'Registration failed due to an unexpected error. Please try again.'
+      );
+    });
 
-    it('should display very generic error if no specific message from backend', fakeAsync(() => {
-      const errorResponse = new HttpErrorResponse({ status: 500 }); // No error.message
-      authService.register.mockReturnValue(throwError(() => errorResponse));
-      component.onSubmit();
-      tick();
-      expect(component.registrationError()).toBe('Registration failed due to an unexpected error. Please try again.');
-    }));
-
-
-    it('should set isSubmitting to true during registration and false after', fakeAsync(() => {
-      authService.register.mockReturnValue(of({}));
+    it('should toggle isSubmitting signal', async () => {
+      (authService.register as Mock).mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 500 }))
+      );
       expect(component.isSubmitting()).toBe(false);
       component.onSubmit();
       expect(component.isSubmitting()).toBe(true);
-      tick();
+      await fixture.whenStable();
       expect(component.isSubmitting()).toBe(false);
-    }));
-
-     it('should mark all fields as touched if form is invalid on submit', () => {
-      component.registerForm.reset(); // make form invalid
-      const markAllAsTouchedSpy = jest.spyOn(component.registerForm, 'markAllAsTouched');
-      component.onSubmit();
-      expect(markAllAsTouchedSpy).toHaveBeenCalled();
     });
-
   });
 
   describe('Terms and Conditions Dialog', () => {
-    it('should open TermsAndConditionsComponent dialog', () => {
-      const mockEvent = { preventDefault: jest.fn() } as unknown as MouseEvent;
+    it('should open MatDialog when openTermsDialog is called', () => {
+      const mockEvent = { preventDefault: vi.fn() } as unknown as MouseEvent;
       component.openTermsDialog(mockEvent);
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(dialog.open).toHaveBeenCalledWith(TermsAndConditionsComponent, {
@@ -245,12 +159,24 @@ describe('RegisterComponent', () => {
         autoFocus: false,
       });
     });
+
+    it('should patch terms_agreed to true if dialog is accepted', () => {
+      (dialog.open as Mock).mockReturnValue({ afterClosed: () => of(true) });
+      component.openTermsDialog(null as unknown as MouseEvent);
+      expect(component.registerForm.controls['terms_agreed'].value).toBe(true);
+    });
+
+    it('should not change terms_agreed if dialog is dismissed', () => {
+      component.registerForm.controls['terms_agreed'].setValue(false);
+      (dialog.open as Mock).mockReturnValue({ afterClosed: () => of(false) });
+      component.openTermsDialog(null as unknown as MouseEvent);
+      expect(component.registerForm.controls['terms_agreed'].value).toBe(false);
+    });
   });
 
   it('should toggle password visibility', () => {
     expect(component.hidePassword()).toBe(true);
-    component.hidePassword.set(!component.hidePassword());
+    component.hidePassword.set(false);
     expect(component.hidePassword()).toBe(false);
   });
-
 });

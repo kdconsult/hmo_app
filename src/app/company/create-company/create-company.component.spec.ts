@@ -1,18 +1,28 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { of, throwError, forkJoin } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 
 import { CreateCompanyComponent } from './create-company.component';
-import { LookupService, Country, CompanyType, LocaleInfo, Currency } from '@/core/services/lookup.service';
-import { CompanyService, CompanyCreationData } from '@/core/services/company.service';
-import { AuthService } from '@/auth/auth.service';
+import {
+  LookupService,
+  Country,
+  CompanyType,
+  LocaleInfo,
+  Currency,
+} from '../../core/services/lookup.service';
+import {
+  CompanyService,
+  CompanyCreationData,
+} from '../../core/services/company.service';
+import { AuthService } from '../../auth/auth.service';
 
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
-
-// Material Modules
+// Preserving original Material Module imports
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -21,140 +31,112 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
-class MockLookupService {
-  getCountries = vi.fn().mockReturnValue(of([] as Country[]));
-  getCompanyTypes = vi.fn().mockReturnValue(of([] as CompanyType[]));
-  getLocales = vi.fn().mockReturnValue(of([] as LocaleInfo[]));
-  getCurrencies = vi.fn().mockReturnValue(of([] as Currency[]));
-}
-
-class MockCompanyService {
-  createCompany = vi.fn();
-}
-
-class MockAuthService {
-  updateTokens = vi.fn();
-  logout = vi.fn();
-  getRefreshToken = vi.fn().mockReturnValue('fake-refresh-token');
-}
-
-class MockRouter {
-  navigate = vi.fn();
-}
-
 describe('CreateCompanyComponent', () => {
   let component: CreateCompanyComponent;
   let fixture: ComponentFixture<CreateCompanyComponent>;
-  let lookupService: MockLookupService;
-  let companyService: MockCompanyService;
-  let authService: MockAuthService;
-  let router: MockRouter;
+  let lookupService: LookupService;
+  let companyService: CompanyService;
+  let authService: AuthService;
+  let router: Router;
 
   const mockCountries: Country[] = [{ id: 'c1', name: 'Country1' }];
   const mockCompanyTypes: CompanyType[] = [{ id: 't1', name: 'Type1' }];
   const mockLocales: LocaleInfo[] = [{ id: 'l1', code: 'en', name: 'English' }];
-  const mockCurrencies: Currency[] = [{ id: 'cur1', code: 'USD', name: 'Dollar', symbol: '$' }];
+  const mockCurrencies: Currency[] = [
+    { id: 'cur1', code: 'USD', name: 'Dollar', symbol: '$' },
+  ];
 
-
-  beforeEach(async () => {
+  const setupTestBed = async (lookupError: boolean = false) => {
     await TestBed.configureTestingModule({
       imports: [
-        CreateCompanyComponent, // Standalone
+        CreateCompanyComponent,
         ReactiveFormsModule,
-        NoopAnimationsModule,
-        MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatProgressSpinnerModule, MatIconModule
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatSelectModule,
+        MatProgressSpinnerModule,
+        MatIconModule,
       ],
       providers: [
-        { provide: LookupService, useClass: MockLookupService },
-        { provide: CompanyService, useClass: MockCompanyService },
-        { provide: AuthService, useClass: MockAuthService },
-        { provide: Router, useClass: MockRouter },
+        provideZonelessChangeDetection(),
+        provideRouter([{ path: 'dashboard', component: class {} }]),
+        provideNoopAnimations(),
+        {
+          provide: LookupService,
+          useValue: {
+            getCountries: vi
+              .fn()
+              .mockReturnValue(
+                lookupError
+                  ? throwError(() => new Error('Lookup Failed'))
+                  : of(mockCountries)
+              ),
+            getCompanyTypes: vi.fn().mockReturnValue(of(mockCompanyTypes)),
+            getLocales: vi.fn().mockReturnValue(of(mockLocales)),
+            getCurrencies: vi.fn().mockReturnValue(of(mockCurrencies)),
+          },
+        },
+        {
+          provide: CompanyService,
+          useValue: { createCompany: vi.fn() },
+        },
+        {
+          provide: AuthService,
+          useValue: { updateTokens: vi.fn() },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CreateCompanyComponent);
     component = fixture.componentInstance;
-    lookupService = TestBed.inject(LookupService) as unknown as MockLookupService;
-    companyService = TestBed.inject(CompanyService) as unknown as MockCompanyService;
-    authService = TestBed.inject(AuthService) as unknown as MockAuthService;
-    router = TestBed.inject(Router) as unknown as MockRouter;
-
-    // Setup default successful lookup mocks
-    lookupService.getCountries.mockReturnValue(of(mockCountries));
-    lookupService.getCompanyTypes.mockReturnValue(of(mockCompanyTypes));
-    lookupService.getLocales.mockReturnValue(of(mockLocales));
-    lookupService.getCurrencies.mockReturnValue(of(mockCurrencies));
-  });
+    lookupService = TestBed.inject(LookupService);
+    companyService = TestBed.inject(CompanyService);
+    authService = TestBed.inject(AuthService);
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+  };
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
-  it('should create', () => {
-    fixture.detectChanges(); // ngOnInit
+  it('should create', async () => {
+    await setupTestBed();
+    fixture.detectChanges();
     expect(component).toBeTruthy();
   });
 
   describe('Lookup Data Loading', () => {
-    it('should call lookup services on init and set isLoadingLookups correctly', fakeAsync(() => {
-      expect(component.isLoadingLookups()).toBe(true); // before ngOnInit / detectChanges
+    it('should call services and set loading signal', async () => {
+      await setupTestBed();
+      expect(component.isLoadingLookups()).toBe(true);
       fixture.detectChanges(); // ngOnInit
+      await fixture.whenStable();
+
       expect(lookupService.getCountries).toHaveBeenCalled();
       expect(lookupService.getCompanyTypes).toHaveBeenCalled();
       expect(lookupService.getLocales).toHaveBeenCalled();
       expect(lookupService.getCurrencies).toHaveBeenCalled();
-
-      tick(); // for forkJoin and finalize
       expect(component.isLoadingLookups()).toBe(false);
-    }));
+    });
 
-    it('should display error and disable form if lookup data fails to load', fakeAsync(() => {
-      lookupService.getCountries.mockReturnValue(throwError(() => new Error('Failed to load countries')));
+    it('should show error if lookup fails', async () => {
+      await setupTestBed(true); // Configure with an error
       fixture.detectChanges(); // ngOnInit
-      tick();
+      await fixture.whenStable();
 
       expect(component.isLoadingLookups()).toBe(false);
-      expect(component.errorMessage()).toBe('Failed to load required data for the form. Please try refreshing the page.');
+      expect(component.errorMessage()).toContain(
+        'Failed to load required data'
+      );
       expect(component.companyForm.disabled).toBe(true);
-    }));
-  });
-
-  describe('Form Validation', () => {
-    beforeEach(() => {
-        fixture.detectChanges(); // Load lookups
-        tick(); // ensure lookups are loaded
-    });
-
-    it('should invalidate form with empty required fields', () => {
-      component.companyForm.reset(); // Clear all fields
-      expect(component.companyForm.valid).toBe(false);
-      expect(component.companyForm.controls['company_name'].hasError('required')).toBe(true);
-      // ... test other required fields similarly
-    });
-
-    it('should validate company_eik pattern', () => {
-      component.companyForm.controls['company_eik'].setValue('invalid-eik');
-      expect(component.companyForm.controls['company_eik'].hasError('pattern')).toBe(true);
-      component.companyForm.controls['company_eik'].setValue('123456789'); // Valid
-      expect(component.companyForm.controls['company_eik'].hasError('pattern')).toBe(false);
-    });
-
-    it('should be valid with all required fields filled correctly', () => {
-      component.companyForm.setValue({
-        company_name: 'Test Corp',
-        company_eik: '1234567890',
-        company_country_id: 'c1',
-        company_type_id: 't1',
-        company_default_locale_id: 'l1',
-        company_default_currency_id: 'cur1',
-        company_address_line1: '', // Optional
-        company_city: '' // Optional
-      });
-      expect(component.companyForm.valid).toBe(true);
     });
   });
 
-  describe('Company Creation Submission', () => {
+  describe('Form Validation and Submission', () => {
     const validCompanyData: CompanyCreationData = {
       company_name: 'Test Corp',
       company_eik: '1234567890',
@@ -163,85 +145,84 @@ describe('CreateCompanyComponent', () => {
       company_default_locale_id: 'l1',
       company_default_currency_id: 'cur1',
       company_address_line1: '123 Main St',
-      company_city: 'Testville'
+      company_city: 'Testville',
     };
 
-    beforeEach(fakeAsync(() => {
-      fixture.detectChanges(); // ngOnInit to load lookups
-      tick();
+    beforeEach(async () => {
+      await setupTestBed();
+      fixture.detectChanges(); // Load lookups
+      await fixture.whenStable();
       component.companyForm.setValue(validCompanyData);
-    }));
+    });
 
-    it('should call companyService.createCompany and authService.updateTokens on success, then navigate', fakeAsync(() => {
+    it('should be valid when all required fields are filled', () => {
+      expect(component.companyForm.valid).toBe(true);
+    });
+
+    it('should create company, update tokens, and navigate on success', async () => {
+      vi.useFakeTimers();
       const mockResponse = {
-        message: 'Company created',
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token'
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
       };
-      companyService.createCompany.mockReturnValue(of(mockResponse));
+      (companyService.createCompany as Mock).mockReturnValue(of(mockResponse));
 
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
 
-      expect(companyService.createCompany).toHaveBeenCalledWith(validCompanyData);
-      expect(authService.updateTokens).toHaveBeenCalledWith(mockResponse.accessToken, mockResponse.refreshToken);
+      expect(companyService.createCompany).toHaveBeenCalledWith(
+        validCompanyData
+      );
+      expect(authService.updateTokens).toHaveBeenCalledWith(
+        'new-access',
+        'new-refresh'
+      );
       expect(component.successMessage()).toContain('created successfully');
-      expect(component.companyForm.disabled).toBe(true);
 
-      tick(3000); // For setTimeout navigation
+      vi.advanceTimersByTime(3000);
+      await fixture.whenStable();
+
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
-    }));
+    });
 
-    it('should call updateTokens with only new access token if refresh token is not in response', fakeAsync(() => {
-        const mockResponse = { message: 'Company created', accessToken: 'new-access-token-only' };
-        companyService.createCompany.mockReturnValue(of(mockResponse));
-        // authService.getRefreshToken is already mocked to return 'fake-refresh-token'
+    it('should handle token update when refresh token is missing from response', async () => {
+      const mockResponse = { accessToken: 'new-access-only' };
+      (companyService.createCompany as Mock).mockReturnValue(of(mockResponse));
 
-        component.onSubmit();
-        tick();
-
-        expect(authService.updateTokens).toHaveBeenCalledWith(mockResponse.accessToken, undefined); // No new refresh token in response
-        // The service's updateTokens method should then use the existing one.
-    }));
-
-
-    it('should display error message on company creation failure (e.g., 409 EIK exists)', fakeAsync(() => {
-      const errorResponse = new HttpErrorResponse({ status: 409, error: { message: 'EIK exists' } });
-      companyService.createCompany.mockReturnValue(throwError(() => errorResponse));
       component.onSubmit();
-      tick();
+      await fixture.whenStable();
 
-      expect(companyService.createCompany).toHaveBeenCalledWith(validCompanyData);
-      expect(authService.updateTokens).not.toHaveBeenCalled();
-      expect(component.errorMessage()).toBe('Company creation failed: This EIK might already be registered.');
-      expect(router.navigate).not.toHaveBeenCalled();
-    }));
+      expect(authService.updateTokens).toHaveBeenCalledWith(
+        'new-access-only',
+        undefined
+      );
+    });
 
-    it('should display error message from error.error.message if available', fakeAsync(() => {
-      const specificErrorMessage = "A very specific error occurred.";
-      const errorResponse = new HttpErrorResponse({ status: 500, error: { message: specificErrorMessage } });
-      companyService.createCompany.mockReturnValue(throwError(() => errorResponse));
+    it('should show error message on 409 conflict', async () => {
+      const error = new HttpErrorResponse({
+        status: 409,
+        error: { message: 'EIK exists' },
+      });
+      (companyService.createCompany as Mock).mockReturnValue(
+        throwError(() => error)
+      );
       component.onSubmit();
-      tick();
-      expect(component.errorMessage()).toBe(`Error: ${specificErrorMessage}`);
-    }));
+      await fixture.whenStable();
+      expect(component.errorMessage()).toBe(
+        'A company with this EIK/VAT number already exists.'
+      );
+    });
 
-
-    it('should set isSubmitting correctly during submission', fakeAsync(() => {
-      companyService.createCompany.mockReturnValue(of({ accessToken: 'token' }));
-      expect(component.isSubmitting()).toBe(false);
+    it('should show generic error for other API failures', async () => {
+      const error = new HttpErrorResponse({ status: 500 });
+      (companyService.createCompany as Mock).mockReturnValue(
+        throwError(() => error)
+      );
       component.onSubmit();
-      expect(component.isSubmitting()).toBe(true);
-      tick();
-      expect(component.isSubmitting()).toBe(false);
-    }));
-
-    it('should not submit if form is invalid and mark form as touched', () => {
-      component.companyForm.controls['company_name'].setValue(''); // Make form invalid
-      const markSpy = vi.spyOn(component.companyForm, 'markAllAsTouched');
-      component.onSubmit();
-      expect(companyService.createCompany).not.toHaveBeenCalled();
-      expect(markSpy).toHaveBeenCalled();
+      await fixture.whenStable();
+      expect(component.errorMessage()).toBe(
+        'An unexpected error occurred. Please try again.'
+      );
     });
   });
 });

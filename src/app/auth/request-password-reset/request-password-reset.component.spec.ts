@@ -1,9 +1,13 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router'; // Though not used for navigation, good for consistency
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { RequestPasswordResetComponent } from './request-password-reset.component';
 import { AuthService } from '../auth.service';
@@ -34,8 +38,12 @@ describe('RequestPasswordResetComponent', () => {
       imports: [
         RequestPasswordResetComponent, // Standalone
         ReactiveFormsModule,
-        NoopAnimationsModule,
-        MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatProgressSpinnerModule,
+        MatIconModule,
       ],
       providers: [
         { provide: AuthService, useClass: MockAuthService },
@@ -65,7 +73,9 @@ describe('RequestPasswordResetComponent', () => {
 
     it('should invalidate the form when email is invalid', () => {
       component.requestResetForm.controls['email'].setValue('invalidemail');
-      expect(component.requestResetForm.controls['email'].hasError('email')).toBe(true);
+      expect(
+        component.requestResetForm.controls['email'].hasError('email')
+      ).toBe(true);
       expect(component.requestResetForm.valid).toBe(false);
     });
 
@@ -83,7 +93,9 @@ describe('RequestPasswordResetComponent', () => {
     });
 
     it('should call authService.requestPasswordReset and display generic success message on API success', fakeAsync(() => {
-      authService.requestPasswordReset.mockReturnValue(of({ message: 'Reset link sent' }));
+      authService.requestPasswordReset.mockReturnValue(
+        of({ message: 'Reset link sent' })
+      );
       component.onSubmit();
       tick();
 
@@ -96,9 +108,16 @@ describe('RequestPasswordResetComponent', () => {
     }));
 
     it('should call authService.requestPasswordReset and display generic success message even on API error', fakeAsync(() => {
-      const errorResponse = new HttpErrorResponse({ status: 500, error: { message: 'Server error' } });
-      authService.requestPasswordReset.mockReturnValue(throwError(() => errorResponse));
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}); // Suppress console.error for this test
+      const errorResponse = new HttpErrorResponse({
+        status: 500,
+        error: { message: 'Server error' },
+      });
+      authService.requestPasswordReset.mockReturnValue(
+        throwError(() => errorResponse)
+      );
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {}); // Suppress console.error for this test
 
       component.onSubmit();
       tick();
@@ -124,22 +143,27 @@ describe('RequestPasswordResetComponent', () => {
 
     it('should not submit if form is invalid and mark form as touched', () => {
       component.requestResetForm.controls['email'].setValue('');
-      const markAllAsTouchedSpy = jest.spyOn(component.requestResetForm, 'markAllAsTouched');
+      const markAllAsTouchedSpy = vi.spyOn(
+        component.requestResetForm,
+        'markAllAsTouched'
+      );
       component.onSubmit();
 
       expect(authService.requestPasswordReset).not.toHaveBeenCalled();
       expect(markAllAsTouchedSpy).toHaveBeenCalled();
     });
 
-     it('should display error message if email control is empty on submit (edge case, form should be invalid)', () => {
-        component.requestResetForm.controls['email'].setValue(null); // or ''
-        // Manually make the form valid to bypass the initial check, to test the internal `if (email)`
-        Object.defineProperty(component.requestResetForm, 'invalid', {get: () => false});
+    it('should display error message if email control is empty on submit (edge case, form should be invalid)', () => {
+      component.requestResetForm.controls['email'].setValue(null); // or ''
+      // Manually make the form valid to bypass the initial check, to test the internal `if (email)`
+      Object.defineProperty(component.requestResetForm, 'invalid', {
+        get: () => false,
+      });
 
-        component.onSubmit();
-        expect(component.messageType()).toBe('error');
-        expect(component.message()).toBe('Please enter a valid email address.');
-        expect(authService.requestPasswordReset).not.toHaveBeenCalled();
+      component.onSubmit();
+      expect(component.messageType()).toBe('error');
+      expect(component.message()).toBe('Please enter a valid email address.');
+      expect(authService.requestPasswordReset).not.toHaveBeenCalled();
     });
   });
 });

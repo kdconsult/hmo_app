@@ -44,7 +44,6 @@ export const passwordComplexityMessages = {
   requireSpecialChar: 'At least one special character (e.g., !@#$%^&*)',
 };
 
-
 // Custom Validators
 function passwordsMatchValidator(
   control: AbstractControl
@@ -54,7 +53,7 @@ function passwordsMatchValidator(
   return password === confirmPassword ? null : { passwordsMismatch: true };
 }
 
-function passwordComplexityValidator(
+export function passwordComplexityValidator(
   control: AbstractControl
 ): ValidationErrors | null {
   const password = control.value;
@@ -76,7 +75,10 @@ function passwordComplexityValidator(
   if (passwordComplexityRules.requireNumeric && !/\d/.test(password)) {
     errors['passwordNumeric'] = true;
   }
-  if (passwordComplexityRules.requireSpecialChar && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password)) {
+  if (
+    passwordComplexityRules.requireSpecialChar &&
+    !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password)
+  ) {
     errors['passwordSpecialChar'] = true;
   }
 
@@ -115,7 +117,6 @@ export class RegisterComponent {
   // Expose to template
   passwordComplexityMessages = passwordComplexityMessages;
 
-
   registerForm = this.fb.group(
     {
       first_name: ['', [Validators.required]],
@@ -138,7 +139,6 @@ export class RegisterComponent {
     this.isSubmitting.set(true);
     this.registrationError.set(null);
     this.registrationSuccessMessage.set(null);
-
 
     // We can omit confirmPassword from the value sent to the backend
     const { first_name, last_name, email, password, terms_agreed } =
@@ -167,9 +167,10 @@ export class RegisterComponent {
               );
             } else if (err.error && err.error.message) {
               // If backend provides a specific message
-              this.registrationError.set(`Registration failed: ${err.error.message}`);
-            }
-            else {
+              this.registrationError.set(
+                `Registration failed: ${err.error.message}`
+              );
+            } else {
               this.registrationError.set(
                 'Registration failed due to an unexpected error. Please try again.'
               );
@@ -179,7 +180,9 @@ export class RegisterComponent {
     } else {
       // Fallback if somehow form is valid but values are not extracted (should not happen with proper validation)
       this.isSubmitting.set(false);
-      this.registrationError.set('Please ensure all fields are filled correctly.');
+      this.registrationError.set(
+        'Please ensure all fields are filled correctly.'
+      );
     }
   }
 

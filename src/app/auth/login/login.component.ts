@@ -16,7 +16,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-
 import { AuthService } from '../auth.service';
 import { finalize } from 'rxjs';
 
@@ -95,9 +94,7 @@ export class LoginComponent {
   onResendVerificationEmail(): void {
     const email = this.emailControl?.value;
     if (!email || this.emailControl?.invalid) {
-      this.resendVerificationMessage.set(
-        'Please enter a valid email address.'
-      );
+      this.resendVerificationMessage.set('Please enter a valid email address.');
       return;
     }
 
@@ -118,10 +115,13 @@ export class LoginComponent {
         error: (err: HttpErrorResponse) => {
           // BLA 3.8.6: "Email address already verified." or "Email address not found in the system (handle with generic message...)"
           // For simplicity here, showing a generic error, but could be more specific based on backend response
-          if (err.status === 409) { // Example: Conflict if already verified
-             this.resendVerificationMessage.set('This email address has already been verified. You can try logging in.');
+          if (err.status === 409) {
+            // Example: Conflict if already verified
+            this.resendVerificationMessage.set(
+              'This email address has already been verified. You can try logging in.'
+            );
           } else {
-             this.resendVerificationMessage.set(
+            this.resendVerificationMessage.set(
               'Failed to resend verification email. Please try again later.'
             );
           }

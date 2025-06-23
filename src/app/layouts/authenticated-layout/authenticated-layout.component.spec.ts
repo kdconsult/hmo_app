@@ -1,58 +1,56 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { RouterTestingModule } from '@angular/router/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Router, NavigationEnd, Event } from '@angular/router'; // Import NavigationEnd and Event
-
+import { Router, NavigationEnd, Event, provideRouter } from '@angular/router';
 import { AuthenticatedLayoutComponent } from './authenticated-layout.component';
-import { AuthService } from '@/auth/auth.service';
+import { AuthService } from '../../auth/auth.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { of, Subject } from 'rxjs';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { Component } from '@angular/core';
 
-// Mock AuthService
+@Component({ standalone: true, template: '' })
+class DummyComponent {}
+
 class MockAuthService {
   logout = vi.fn();
   isLoggedIn$ = new Subject<boolean>();
   currentCompanyId$ = new Subject<string | null>();
 }
 
-// Mock BreakpointObserver
 class MockBreakpointObserver {
   observe = vi.fn().mockReturnValue(of({ matches: false, breakpoints: {} }));
 }
 
-// Mock Router - use a Subject for events
 class MockRouter {
-    navigate = vi.fn().mockResolvedValue(true);
-    events = new Subject<Event>(); // Use Subject for events
-    // Add a dummy url property or getter if component tries to access it, though not in current component logic
-    get url(): string { return this._currentUrl; }
-    private _currentUrl: string = '/';
-    // Simulate navigation for testing purposes, though not strictly needed for this component's current logic
-    public triggerNavEnd(url: string, urlAfterRedirects: string) {
-        this._currentUrl = urlAfterRedirects;
-        (this.events as Subject<Event>).next(new NavigationEnd(1, url, urlAfterRedirects));
-    }
-}
+  public events = new Subject<Event>();
+  // The only method we need to spy on for our test is navigate
+  navigate = vi.fn().mockResolvedValue(true);
 
+  // Method to manually trigger navigation events for testing
+  triggerNavEnd(url: string, urlAfterRedirects: string) {
+    this.events.next(new NavigationEnd(1, url, urlAfterRedirects));
+  }
+}
 
 describe('AuthenticatedLayoutComponent', () => {
   let component: AuthenticatedLayoutComponent;
   let fixture: ComponentFixture<AuthenticatedLayoutComponent>;
   let authService: MockAuthService;
-  let breakpointObserver: MockBreakpointObserver;
   let router: MockRouter;
-
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        AuthenticatedLayoutComponent,
-        NoopAnimationsModule,
-      ],
+      imports: [AuthenticatedLayoutComponent],
       providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([
+          // Define dummy routes used in tests
+          { path: 'create-company', component: DummyComponent },
+          { path: 'dashboard', component: DummyComponent },
+        ]),
         { provide: AuthService, useClass: MockAuthService },
         { provide: BreakpointObserver, useClass: MockBreakpointObserver },
+        // We override the Router provider from provideRouter to use our mock with spies
         { provide: Router, useClass: MockRouter },
       ],
     }).compileComponents();
@@ -60,7 +58,6 @@ describe('AuthenticatedLayoutComponent', () => {
     fixture = TestBed.createComponent(AuthenticatedLayoutComponent);
     component = fixture.componentInstance;
     authService = TestBed.inject(AuthService) as unknown as MockAuthService;
-    breakpointObserver = TestBed.inject(BreakpointObserver) as unknown as MockBreakpointObserver;
     router = TestBed.inject(Router) as unknown as MockRouter;
   });
 
@@ -69,7 +66,7 @@ describe('AuthenticatedLayoutComponent', () => {
   });
 
   it('should create', () => {
-    fixture.detectChanges(); // Trigger ngOnInit
+    fixture.detectChanges();
     expect(component).toBeTruthy();
   });
 
@@ -80,48 +77,56 @@ describe('AuthenticatedLayoutComponent', () => {
   });
 
   describe('Redirection Logic', () => {
-    it('should navigate to /create-company if logged in, no companyId, and not on /create-company', fakeAsync(() => {
+    it('should navigate to /create-company if logged in, no companyId, and not on /create-company', async () => {
       fixture.detectChanges(); // ngOnInit subscribes
 
       authService.isLoggedIn$.next(true);
       authService.currentCompanyId$.next(null);
-      router.triggerNavEnd('/dashboard', '/dashboard'); // Simulate navigation
-      tick(); // Allow time for combineLatest and async operations
+      router.triggerNavEnd('/dashboard', '/dashboard');
+
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(router.navigate).toHaveBeenCalledWith(['/create-company']);
-    }));
+    });
 
-    it('should NOT navigate if not logged in', fakeAsync(() => {
+    it('should NOT navigate if not logged in', async () => {
       fixture.detectChanges();
 
       authService.isLoggedIn$.next(false);
       authService.currentCompanyId$.next(null);
       router.triggerNavEnd('/dashboard', '/dashboard');
-      tick();
 
-      expect(router.navigate).not.toHaveBeenCalledWith(['/create-company']);
-    }));
+      await fixture.whenStable();
+      fixture.detectChanges();
 
-    it('should NOT navigate if companyId exists', fakeAsync(() => {
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should NOT navigate if companyId exists', async () => {
       fixture.detectChanges();
 
       authService.isLoggedIn$.next(true);
       authService.currentCompanyId$.next('company123');
       router.triggerNavEnd('/dashboard', '/dashboard');
-      tick();
 
-      expect(router.navigate).not.toHaveBeenCalledWith(['/create-company']);
-    }));
+      await fixture.whenStable();
+      fixture.detectChanges();
 
-    it('should NOT navigate if already on /create-company', fakeAsync(() => {
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should NOT navigate if already on /create-company', async () => {
       fixture.detectChanges();
 
       authService.isLoggedIn$.next(true);
       authService.currentCompanyId$.next(null);
       router.triggerNavEnd('/create-company', '/create-company');
-      tick();
 
-      expect(router.navigate).not.toHaveBeenCalledWith(['/create-company']);
-    }));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
   });
 });

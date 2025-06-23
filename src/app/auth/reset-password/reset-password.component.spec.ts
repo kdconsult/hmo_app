@@ -1,16 +1,19 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { ResetPasswordComponent } from './reset-password.component';
 import { AuthService } from '../auth.service';
 // Assuming password complexity constants/validators are correctly imported or mocked if needed
 // For this test, we'll rely on the component's own import of them.
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
-
 
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
@@ -41,8 +44,12 @@ describe('ResetPasswordComponent', () => {
       imports: [
         ResetPasswordComponent, // Standalone
         ReactiveFormsModule,
-        NoopAnimationsModule,
-        MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatProgressSpinnerModule, MatIconModule
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatProgressSpinnerModule,
+        MatIconModule,
       ],
       providers: [
         { provide: AuthService, useClass: MockAuthService },
@@ -88,13 +95,15 @@ describe('ResetPasswordComponent', () => {
     expect(component['resetToken']).toBeNull();
     expect(component.resetPasswordForm.disabled).toBe(true);
     expect(component.messageType()).toBe('error');
-    expect(component.message()).toBe('Password reset token not found or invalid. Please request a new reset link.');
+    expect(component.message()).toBe(
+      'Password reset token not found or invalid. Please request a new reset link.'
+    );
   }));
 
   describe('Form Validation', () => {
     beforeEach(() => {
-        setupComponent({ token: mockToken });
-        fixture.detectChanges();
+      setupComponent({ token: mockToken });
+      fixture.detectChanges();
     });
 
     it('should invalidate form with empty passwords', () => {
@@ -105,18 +114,30 @@ describe('ResetPasswordComponent', () => {
 
     it('should validate password complexity for newPassword', () => {
       component.resetPasswordForm.controls['newPassword'].setValue('weak');
-      expect(component.newPasswordControl?.hasError('passwordMinLength')).toBe(true); // Example check
+      expect(component.newPasswordControl?.hasError('passwordMinLength')).toBe(
+        true
+      ); // Example check
     });
 
     it('should validate password mismatch', () => {
-      component.resetPasswordForm.controls['newPassword'].setValue('ValidP@ss1');
-      component.resetPasswordForm.controls['confirmNewPassword'].setValue('ValidP@ss2');
-      expect(component.resetPasswordForm.hasError('passwordsMismatch')).toBe(true);
+      component.resetPasswordForm.controls['newPassword'].setValue(
+        'ValidP@ss1'
+      );
+      component.resetPasswordForm.controls['confirmNewPassword'].setValue(
+        'ValidP@ss2'
+      );
+      expect(component.resetPasswordForm.hasError('passwordsMismatch')).toBe(
+        true
+      );
     });
 
     it('should validate with valid, matching, complex passwords', () => {
-      component.resetPasswordForm.controls['newPassword'].setValue('ValidP@ss123');
-      component.resetPasswordForm.controls['confirmNewPassword'].setValue('ValidP@ss123');
+      component.resetPasswordForm.controls['newPassword'].setValue(
+        'ValidP@ss123'
+      );
+      component.resetPasswordForm.controls['confirmNewPassword'].setValue(
+        'ValidP@ss123'
+      );
       expect(component.resetPasswordForm.valid).toBe(true);
     });
   });
@@ -126,18 +147,29 @@ describe('ResetPasswordComponent', () => {
     beforeEach(() => {
       setupComponent({ token: mockToken });
       fixture.detectChanges();
-      component.resetPasswordForm.controls['newPassword'].setValue(validPassword);
-      component.resetPasswordForm.controls['confirmNewPassword'].setValue(validPassword);
+      component.resetPasswordForm.controls['newPassword'].setValue(
+        validPassword
+      );
+      component.resetPasswordForm.controls['confirmNewPassword'].setValue(
+        validPassword
+      );
     });
 
     it('should call authService.resetPassword and navigate to login on success', fakeAsync(() => {
-      authService.resetPassword.mockReturnValue(of({ message: 'Password reset' }));
+      authService.resetPassword.mockReturnValue(
+        of({ message: 'Password reset' })
+      );
       component.onSubmit();
       tick();
 
-      expect(authService.resetPassword).toHaveBeenCalledWith(mockToken, validPassword);
+      expect(authService.resetPassword).toHaveBeenCalledWith(
+        mockToken,
+        validPassword
+      );
       expect(component.messageType()).toBe('success');
-      expect(component.message()).toBe('Password successfully reset. You will be redirected to login shortly.');
+      expect(component.message()).toBe(
+        'Password successfully reset. You will be redirected to login shortly.'
+      );
       expect(component.resetPasswordForm.disabled).toBe(true);
 
       tick(3000); // For setTimeout
@@ -145,25 +177,36 @@ describe('ResetPasswordComponent', () => {
     }));
 
     it('should display error message on API failure (e.g., 400 invalid token)', fakeAsync(() => {
-      const errorResponse = new HttpErrorResponse({ status: 400, error: { message: 'Token invalid' } });
-      authService.resetPassword.mockReturnValue(throwError(() => errorResponse));
+      const errorResponse = new HttpErrorResponse({
+        status: 400,
+        error: { message: 'Token invalid' },
+      });
+      authService.resetPassword.mockReturnValue(
+        throwError(() => errorResponse)
+      );
       component.onSubmit();
       tick();
 
-      expect(authService.resetPassword).toHaveBeenCalledWith(mockToken, validPassword);
+      expect(authService.resetPassword).toHaveBeenCalledWith(
+        mockToken,
+        validPassword
+      );
       expect(component.messageType()).toBe('error');
-      expect(component.message()).toBe('Invalid or expired reset token. Please try requesting a new link.');
+      expect(component.message()).toBe(
+        'Invalid or expired reset token. Please try requesting a new link.'
+      );
       expect(router.navigate).not.toHaveBeenCalled();
     }));
 
     it('should display generic error message for other API failures', fakeAsync(() => {
       const errorResponse = new HttpErrorResponse({ status: 500 });
-      authService.resetPassword.mockReturnValue(throwError(() => errorResponse));
+      authService.resetPassword.mockReturnValue(
+        throwError(() => errorResponse)
+      );
       component.onSubmit();
       tick();
       expect(component.message()).toBe('Failed to reset password.');
     }));
-
 
     it('should set isLoading to true during submission and false after', fakeAsync(() => {
       authService.resetPassword.mockReturnValue(of({}));
@@ -176,7 +219,7 @@ describe('ResetPasswordComponent', () => {
 
     it('should not submit if form is invalid and mark form as touched', () => {
       component.resetPasswordForm.controls['newPassword'].setValue('');
-      const markSpy = jest.spyOn(component.resetPasswordForm, 'markAllAsTouched');
+      const markSpy = vi.spyOn(component.resetPasswordForm, 'markAllAsTouched');
       component.onSubmit();
       expect(authService.resetPassword).not.toHaveBeenCalled();
       expect(markSpy).toHaveBeenCalled();
@@ -186,7 +229,9 @@ describe('ResetPasswordComponent', () => {
       component['resetToken'] = null; // Simulate token becoming null after init
       component.onSubmit();
       expect(authService.resetPassword).not.toHaveBeenCalled();
-      expect(component.message()).toBe('Cannot reset password without a valid token.');
+      expect(component.message()).toBe(
+        'Cannot reset password without a valid token.'
+      );
     });
   });
 

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '@/environments/environment'; // Standardized path alias
+import { environment } from '../../../environments/environment'; // Standardized path alias
 
 // Define an interface for the company creation payload based on BLA 3.7.2
 export interface CompanyCreationData {
@@ -12,8 +12,8 @@ export interface CompanyCreationData {
   company_default_locale_id: string;
   company_default_currency_id: string;
   // Optional fields from BLA 3.7.2
-  company_address_line1?: string;
-  company_city?: string;
+  company_address_line1: string | null;
+  company_city: string | null;
   // company_post_code?: string; // Not explicitly in 3.7.2 but typical for address
   // company_region_name?: string; // Not explicitly in 3.7.2 but typical for address
 }

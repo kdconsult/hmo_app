@@ -1,8 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import {
-  HttpClientTestingModule,
-  HttpTestingController,
-} from '@angular/common/http/testing';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Router } from '@angular/router';
 import { PLATFORM_ID } from '@angular/core';
@@ -11,8 +8,10 @@ import { filter, take } from 'rxjs/operators'; // Import filter and take
 import { AuthService } from './auth.service';
 import { environment } from '@/environments/environment';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
+import { firstValueFrom, lastValueFrom, Observable } from 'rxjs';
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
+import { HttpContextToken } from '@angular/common/http';
 
 // Mock jwt-decode using Vitest's mocking
 vi.mock('jwt-decode', () => ({
@@ -26,7 +25,6 @@ describe('AuthService', () => {
   // Cast to Vitest's MockedFunction type
   let mockJwtDecode = jwtDecode as ReturnType<typeof vi.fn>;
 
-
   const mockAccessToken = 'mock.access.token';
   const mockRefreshToken = 'mock.refresh.token';
   const mockUserEmail = 'test@example.com';
@@ -34,10 +32,11 @@ describe('AuthService', () => {
   const accessTokenKey = environment.tokenKey; //hmo_access_token
   const refreshTokenKey = environment.refreshTokenKey; //hmo_refresh_token
 
+  const BYPASS_AUTH_INTERCEPTOR = new HttpContextToken<boolean>(() => false);
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, RouterTestingModule.withRoutes([])],
+      imports: [RouterTestingModule.withRoutes([])],
       providers: [AuthService, { provide: PLATFORM_ID, useValue: 'browser' }],
     });
     service = TestBed.inject(AuthService);
@@ -46,7 +45,9 @@ describe('AuthService', () => {
     mockJwtDecode.mockClear(); // This is fine for vi.fn() as well
 
     // Spy on navigation using Vitest
-    vi.spyOn(router, 'navigate').mockImplementation(() => Promise.resolve(true));
+    vi.spyOn(router, 'navigate').mockImplementation(() =>
+      Promise.resolve(true)
+    );
 
     // Clear localStorage before each test for a clean slate
     localStorage.clear();
@@ -66,12 +67,23 @@ describe('AuthService', () => {
   describe('Login', () => {
     it('should store tokens and update isLoggedIn$ on successful login', async () => {
       const loginCredentials = { email: mockUserEmail, password: 'password' };
-      const loginResponse = { accessToken: mockAccessToken, refreshToken: mockRefreshToken };
-      const decodedTokenFuture: JwtPayload = { exp: (Date.now() / 1000) + 3600, sub: 'user1' };
+      const loginResponse = {
+        accessToken: mockAccessToken,
+        refreshToken: mockRefreshToken,
+      };
+      const decodedTokenFuture: JwtPayload = {
+        exp: Date.now() / 1000 + 3600,
+        sub: 'user1',
+      };
       mockJwtDecode.mockReturnValue(decodedTokenFuture);
 
       // Use a promise to wait for isLoggedIn$ to emit true
-      const loggedInPromise = firstValueFrom(service.isLoggedIn$.pipe(filter(status => status === true), take(1)));
+      const loggedInPromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((status) => status === true),
+          take(1)
+        )
+      );
 
       const loginObservable = service.login(loginCredentials);
       const req = httpMock.expectOne(`${environment.apiUrl}/auth/login`);
@@ -92,15 +104,18 @@ describe('AuthService', () => {
       const loginResponse = {}; // Empty response
 
       // isLoggedIn$ should already be false or become false
-      const isLoggedInFalsePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(s => !s), take(1)));
-
+      const isLoggedInFalsePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((s) => !s),
+          take(1)
+        )
+      );
 
       const loginObservable = service.login(loginCredentials);
       const req = httpMock.expectOne(`${environment.apiUrl}/auth/login`);
       req.flush(loginResponse);
 
       await lastValueFrom(loginObservable);
-
 
       expect(localStorage.getItem(accessTokenKey)).toBeNull();
       expect(localStorage.getItem(refreshTokenKey)).toBeNull();
@@ -111,12 +126,20 @@ describe('AuthService', () => {
 
     it('should handle HTTP error during login gracefully', async () => {
       const loginCredentials = { email: mockUserEmail, password: 'password' };
-      const isLoggedInFalsePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(s => !s), take(1)));
+      const isLoggedInFalsePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((s) => !s),
+          take(1)
+        )
+      );
 
       try {
         const loginObservable = service.login(loginCredentials);
         const req = httpMock.expectOne(`${environment.apiUrl}/auth/login`);
-        req.flush({ message: 'Invalid credentials' }, { status: 401, statusText: 'Unauthorized' });
+        req.flush(
+          { message: 'Invalid credentials' },
+          { status: 401, statusText: 'Unauthorized' }
+        );
         await lastValueFrom(loginObservable);
         // Should not reach here if error is thrown by service's observable chain
       } catch (err: any) {
@@ -135,11 +158,18 @@ describe('AuthService', () => {
       // Setup: Simulate a logged-in state
       localStorage.setItem(accessTokenKey, mockAccessToken);
       localStorage.setItem(refreshTokenKey, mockRefreshToken);
-      const decodedTokenFuture: JwtPayload = { exp: (Date.now() / 1000) + 3600, sub: 'user1' };
+      const decodedTokenFuture: JwtPayload = {
+        exp: Date.now() / 1000 + 3600,
+        sub: 'user1',
+      };
       mockJwtDecode.mockReturnValue(decodedTokenFuture);
       service = TestBed.inject(AuthService); // Re-initialize to pick up localStorage in constructor for loggedInStatus
-      const isLoggedInFalsePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(s => !s), take(1)));
-
+      const isLoggedInFalsePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((s) => !s),
+          take(1)
+        )
+      );
 
       service.logout();
 
@@ -154,7 +184,7 @@ describe('AuthService', () => {
 
   describe('Token Management (isLoggedIn, getUserCompanyId)', () => {
     it('isLoggedIn() should return true for a valid, non-expired token', () => {
-      const futureExp = (Date.now() / 1000) + 3600;
+      const futureExp = Date.now() / 1000 + 3600;
       mockJwtDecode.mockReturnValue({ exp: futureExp } as JwtPayload);
       localStorage.setItem(accessTokenKey, mockAccessToken);
       service = TestBed.inject(AuthService); // Re-init to pick up new localStorage state for constructor
@@ -162,7 +192,7 @@ describe('AuthService', () => {
     });
 
     it('isLoggedIn() should return false for an expired token', () => {
-      const pastExp = (Date.now() / 1000) - 3600;
+      const pastExp = Date.now() / 1000 - 3600;
       mockJwtDecode.mockReturnValue({ exp: pastExp } as JwtPayload);
       localStorage.setItem(accessTokenKey, mockAccessToken);
       service = TestBed.inject(AuthService);
@@ -176,7 +206,9 @@ describe('AuthService', () => {
     });
 
     it('isLoggedIn() should return false if token is malformed (jwtDecode throws)', () => {
-      mockJwtDecode.mockImplementation(() => { throw new Error('Invalid token'); });
+      mockJwtDecode.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
       localStorage.setItem(accessTokenKey, 'malformed.token');
       service = TestBed.inject(AuthService);
       expect(service.isLoggedIn()).toBe(false);
@@ -185,12 +217,12 @@ describe('AuthService', () => {
     it('getUserCompanyId() should return company ID from token claims', () => {
       const companyId = 'company-123';
       mockJwtDecode.mockReturnValue({
-        exp: (Date.now() / 1000) + 3600,
+        exp: Date.now() / 1000 + 3600,
         'https://hasura.io/jwt/claims': {
           'x-hasura-company-id': companyId,
           'x-hasura-default-role': 'user',
           'x-hasura-allowed-roles': ['user'],
-          'x-hasura-user-id': 'user-abc'
+          'x-hasura-user-id': 'user-abc',
         },
       } as any);
       localStorage.setItem(accessTokenKey, mockAccessToken);
@@ -200,11 +232,11 @@ describe('AuthService', () => {
 
     it('getUserCompanyId() should return null if company ID claim is missing', () => {
       mockJwtDecode.mockReturnValue({
-        exp: (Date.now() / 1000) + 3600,
+        exp: Date.now() / 1000 + 3600,
         'https://hasura.io/jwt/claims': {
-            'x-hasura-default-role': 'user',
-            'x-hasura-allowed-roles': ['user'],
-            'x-hasura-user-id': 'user-abc'
+          'x-hasura-default-role': 'user',
+          'x-hasura-allowed-roles': ['user'],
+          'x-hasura-user-id': 'user-abc',
         },
       } as any);
       localStorage.setItem(accessTokenKey, mockAccessToken);
@@ -217,15 +249,20 @@ describe('AuthService', () => {
       localStorage.setItem(accessTokenKey, mockAccessToken);
       localStorage.setItem(refreshTokenKey, mockRefreshToken);
       mockJwtDecode.mockReturnValue({
-        exp: (Date.now() / 1000) + 3600,
-        'https://hasura.io/jwt/claims': { 'x-hasura-company-id': companyId }
+        exp: Date.now() / 1000 + 3600,
+        'https://hasura.io/jwt/claims': { 'x-hasura-company-id': companyId },
       } as any);
 
       // Need to re-initialize service or call a method that updates the BehaviorSubject
       // Here, calling updateTokens will internally call _setTokens which updates currentCompanyId$
       service.updateTokens(mockAccessToken, mockRefreshToken);
 
-      const id = await firstValueFrom(service.currentCompanyId$.pipe(filter(val => val === companyId), take(1)));
+      const id = await firstValueFrom(
+        service.currentCompanyId$.pipe(
+          filter((val) => val === companyId),
+          take(1)
+        )
+      );
       expect(id).toBe(companyId);
     });
   });
@@ -234,13 +271,23 @@ describe('AuthService', () => {
     it('should successfully refresh token and update stored tokens', async () => {
       localStorage.setItem(refreshTokenKey, mockRefreshToken);
       const newAccessToken = 'new.access.token';
-      const decodedTokenFuture: JwtPayload = { exp: (Date.now() / 1000) + 7200, sub: 'user1' };
+      const decodedTokenFuture: JwtPayload = {
+        exp: Date.now() / 1000 + 7200,
+        sub: 'user1',
+      };
       mockJwtDecode.mockReturnValue(decodedTokenFuture);
 
-      const loggedInPromise = firstValueFrom(service.isLoggedIn$.pipe(filter(status => status === true), take(1)));
+      const loggedInPromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((status) => status === true),
+          take(1)
+        )
+      );
 
       const refreshObservable = service.refreshToken();
-      const req = httpMock.expectOne(`${environment.apiUrl}/auth/refresh-token`);
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/auth/refresh-token`
+      );
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ refreshToken: mockRefreshToken });
       expect(req.request.context.get(BYPASS_AUTH_INTERCEPTOR)).toBe(true);
@@ -258,21 +305,35 @@ describe('AuthService', () => {
       localStorage.setItem(refreshTokenKey, 'old.refresh.token');
       const newAccessToken = 'new.access.token.rotated';
       const newRefreshTokenRotated = 'new.rotated.refresh.token';
-      mockJwtDecode.mockReturnValue({ exp: (Date.now() / 1000) + 7200 } as JwtPayload);
+      mockJwtDecode.mockReturnValue({
+        exp: Date.now() / 1000 + 7200,
+      } as JwtPayload);
 
       const refreshObservable = service.refreshToken();
-      const req = httpMock.expectOne(`${environment.apiUrl}/auth/refresh-token`);
-      req.flush({ accessToken: newAccessToken, newRefreshToken: newRefreshTokenRotated });
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/auth/refresh-token`
+      );
+      req.flush({
+        accessToken: newAccessToken,
+        newRefreshToken: newRefreshTokenRotated,
+      });
 
       await lastValueFrom(refreshObservable);
 
       expect(localStorage.getItem(accessTokenKey)).toBe(newAccessToken);
-      expect(localStorage.getItem(refreshTokenKey)).toBe(newRefreshTokenRotated);
+      expect(localStorage.getItem(refreshTokenKey)).toBe(
+        newRefreshTokenRotated
+      );
     });
 
     it('should logout if no refresh token is available', async () => {
       localStorage.removeItem(refreshTokenKey);
-      const isLoggedInFalsePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(s => !s), take(1)));
+      const isLoggedInFalsePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((s) => !s),
+          take(1)
+        )
+      );
 
       try {
         await lastValueFrom(service.refreshToken());
@@ -287,12 +348,22 @@ describe('AuthService', () => {
 
     it('should logout if refresh token API call fails', async () => {
       localStorage.setItem(refreshTokenKey, mockRefreshToken);
-      const isLoggedInFalsePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(s => !s), take(1)));
+      const isLoggedInFalsePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((s) => !s),
+          take(1)
+        )
+      );
 
       try {
         const refreshObservable = service.refreshToken();
-        const req = httpMock.expectOne(`${environment.apiUrl}/auth/refresh-token`);
-        req.flush({ message: 'Invalid refresh token' }, { status: 401, statusText: 'Unauthorized' });
+        const req = httpMock.expectOne(
+          `${environment.apiUrl}/auth/refresh-token`
+        );
+        req.flush(
+          { message: 'Invalid refresh token' },
+          { status: 401, statusText: 'Unauthorized' }
+        );
         await lastValueFrom(refreshObservable);
       } catch (err: any) {
         expect(err).toBeTruthy();
@@ -304,15 +375,24 @@ describe('AuthService', () => {
 
     it('should logout if refresh token API call returns no access token', async () => {
       localStorage.setItem(refreshTokenKey, mockRefreshToken);
-      const isLoggedInFalsePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(s => !s), take(1)));
+      const isLoggedInFalsePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((s) => !s),
+          take(1)
+        )
+      );
 
       try {
         const refreshObservable = service.refreshToken();
-        const req = httpMock.expectOne(`${environment.apiUrl}/auth/refresh-token`);
+        const req = httpMock.expectOne(
+          `${environment.apiUrl}/auth/refresh-token`
+        );
         req.flush({}); // Empty response
         await lastValueFrom(refreshObservable);
       } catch (err: any) {
-         expect(err.message).toContain('Refresh token endpoint did not return an access token.');
+        expect(err.message).toContain(
+          'Refresh token endpoint did not return an access token.'
+        );
       }
       expect(router.navigate).toHaveBeenCalledWith(['/login']);
       const status = await isLoggedInFalsePromise;
@@ -325,10 +405,18 @@ describe('AuthService', () => {
       const initialRefreshToken = 'initial.refresh.token';
       const newAccessToken = 'updated.access.token';
       localStorage.setItem(refreshTokenKey, initialRefreshToken); // Ensure initial refresh token is set
-      const decodedTokenFuture: JwtPayload = { exp: (Date.now() / 1000) + 3600, sub: 'user1' };
+      const decodedTokenFuture: JwtPayload = {
+        exp: Date.now() / 1000 + 3600,
+        sub: 'user1',
+      };
       mockJwtDecode.mockReturnValue(decodedTokenFuture);
 
-      const isLoggedInTruePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(status => status === true), take(1)));
+      const isLoggedInTruePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((status) => status === true),
+          take(1)
+        )
+      );
 
       service.updateTokens(newAccessToken);
 
@@ -342,14 +430,18 @@ describe('AuthService', () => {
     it('should update both access and refresh tokens if both are provided', async () => {
       const newAccessToken = 'updated.access.token.2';
       const newRefreshTokenProvided = 'updated.refresh.token.2';
-      const decodedTokenFuture: JwtPayload = { exp: (Date.now() / 1000) + 3600, sub: 'user1' };
+      const decodedTokenFuture: JwtPayload = {
+        exp: Date.now() / 1000 + 3600,
+        sub: 'user1',
+      };
       mockJwtDecode.mockReturnValue(decodedTokenFuture);
-
 
       service.updateTokens(newAccessToken, newRefreshTokenProvided);
 
       expect(localStorage.getItem(accessTokenKey)).toBe(newAccessToken);
-      expect(localStorage.getItem(refreshTokenKey)).toBe(newRefreshTokenProvided);
+      expect(localStorage.getItem(refreshTokenKey)).toBe(
+        newRefreshTokenProvided
+      );
       // Check isLoggedIn$ or currentCompanyId$ if they are expected to change and be stable after this
       // For now, just checking localStorage is sufficient for this specific test's scope.
     });
@@ -357,7 +449,12 @@ describe('AuthService', () => {
     it('should logout if trying to update tokens but no refresh token exists (and none provided)', async () => {
       localStorage.removeItem(refreshTokenKey); // Ensure no refresh token
       const newAccessToken = 'updated.access.token.3';
-      const isLoggedInFalsePromise = firstValueFrom(service.isLoggedIn$.pipe(filter(s => !s), take(1)));
+      const isLoggedInFalsePromise = firstValueFrom(
+        service.isLoggedIn$.pipe(
+          filter((s) => !s),
+          take(1)
+        )
+      );
 
       service.updateTokens(newAccessToken); // No refresh token provided
 
@@ -370,25 +467,54 @@ describe('AuthService', () => {
   // Tests for register, resendVerification, verifyEmailToken, requestPasswordReset, resetPassword
   // These are simpler as they mostly involve direct HTTP calls without complex state changes in AuthService itself
   const simpleAuthActions = [
-    { name: 'register', payload: { email: 'a', password: 'b' }, path: 'register' },
-    { name: 'resendVerification', payload: { email: 'a' }, path: 'resend-verification-email' },
+    {
+      name: 'register',
+      payload: { email: 'a', password: 'b' },
+      path: 'register',
+    },
+    {
+      name: 'resendVerification',
+      payload: { email: 'a' },
+      path: 'resend-verification-email',
+    },
     { name: 'verifyEmailToken', payload: { token: 't' }, path: 'verify-email' },
-    { name: 'requestPasswordReset', payload: { email: 'a' }, path: 'request-password-reset' },
-    { name: 'resetPassword', payload: { token: 't', new_password: 'p' }, path: 'reset-password' },
+    {
+      name: 'requestPasswordReset',
+      payload: { email: 'a' },
+      path: 'request-password-reset',
+    },
+    {
+      name: 'resetPassword',
+      payload: { token: 't', new_password: 'p' },
+      path: 'reset-password',
+    },
   ];
 
-  simpleAuthActions.forEach(actionInfo => {
+  simpleAuthActions.forEach((actionInfo) => {
     describe(actionInfo.name, () => {
       it(`should make a POST request to /auth/${actionInfo.path}`, async () => {
         // Type assertion to call method by string name
-        const methodToCall = (service as any)[actionInfo.name] as (payload: any) => Observable<any>;
+        const methodToCall = (service as any)[actionInfo.name] as (
+          payload: any
+        ) => Observable<any>;
 
         const requestObservable = methodToCall(actionInfo.payload);
-        const reqPromise = new Promise<void>(resolve => {
-            const s = requestObservable.subscribe({ complete: () => { s.unsubscribe(); resolve(); }, error: () => {s.unsubscribe(); resolve();} });
+        const reqPromise = new Promise<void>((resolve) => {
+          const s = requestObservable.subscribe({
+            complete: () => {
+              s.unsubscribe();
+              resolve();
+            },
+            error: () => {
+              s.unsubscribe();
+              resolve();
+            },
+          });
         });
 
-        const req = httpMock.expectOne(`${environment.apiUrl}/auth/${actionInfo.path}`);
+        const req = httpMock.expectOne(
+          `${environment.apiUrl}/auth/${actionInfo.path}`
+        );
         expect(req.request.method).toBe('POST');
         req.flush({}); // Respond with empty object for success
 

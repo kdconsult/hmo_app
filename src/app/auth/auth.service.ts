@@ -4,7 +4,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable, tap, BehaviorSubject, throwError } from 'rxjs'; // Added BehaviorSubject and throwError
 import { jwtDecode, JwtPayload } from 'jwt-decode'; // Import JwtPayload
 import { BYPASS_AUTH_INTERCEPTOR } from './auth.interceptor';
-import { environment } from '@/environments/environment'; // Standardized path alias
+import { environment } from '../../environments/environment'; // Standardized path alias
 import { Router } from '@angular/router';
 
 @Injectable({
@@ -21,10 +21,13 @@ export class AuthService {
   private accessTokenKey = environment.tokenKey;
   private refreshTokenKey = environment.refreshTokenKey;
 
-  private loggedInStatus = new BehaviorSubject<boolean>(this._hasValidAccessToken());
+  private loggedInStatus = new BehaviorSubject<boolean>(
+    this._hasValidAccessToken()
+  );
   // Emits the company ID from token, or null if not present/not logged in
-  private currentCompanyId = new BehaviorSubject<string | null>(this._getUserCompanyIdFromToken());
-
+  private currentCompanyId = new BehaviorSubject<string | null>(
+    this._getUserCompanyIdFromToken()
+  );
 
   constructor() {
     if (this.isBrowser) {
@@ -42,20 +45,20 @@ export class AuthService {
     return this.currentCompanyId.asObservable();
   }
 
-
   login(credentials: { email: string; password: string }): Observable<any> {
-    return this.http
-      .post<any>(`${this.apiUrl}/auth/login`, credentials)
-      .pipe(
-        tap((response) => {
-          if (response && response.accessToken && response.refreshToken) {
-            this._setTokens(response.accessToken, response.refreshToken);
-          } else {
-            console.error('Login response did not include expected tokens:', response);
-            this._clearTokensAndNotify(); // Clear any partial state and notify
-          }
-        })
-      );
+    return this.http.post<any>(`${this.apiUrl}/auth/login`, credentials).pipe(
+      tap((response) => {
+        if (response && response.accessToken && response.refreshToken) {
+          this._setTokens(response.accessToken, response.refreshToken);
+        } else {
+          console.error(
+            'Login response did not include expected tokens:',
+            response
+          );
+          this._clearTokensAndNotify(); // Clear any partial state and notify
+        }
+      })
+    );
   }
 
   register(userInfo: any): Observable<any> {
@@ -80,11 +83,12 @@ export class AuthService {
     // import { HttpContext } from '@angular/common/http';
     // import { BYPASS_AUTH_INTERCEPTOR } from './auth.interceptor'; // Adjust path as needed
 
-    return this.http.post<any>(
-      `${this.apiUrl}/auth/refresh-token`,
-      { refreshToken },
-      { context: new HttpContext().set(BYPASS_AUTH_INTERCEPTOR, true) } // Bypass interceptor for this call
-    )
+    return this.http
+      .post<any>(
+        `${this.apiUrl}/auth/refresh-token`,
+        { refreshToken },
+        { context: new HttpContext().set(BYPASS_AUTH_INTERCEPTOR, true) } // Bypass interceptor for this call
+      )
       .pipe(
         tap((response) => {
           if (response && response.accessToken) {
@@ -93,9 +97,11 @@ export class AuthService {
             this._setTokens(response.accessToken, newRefreshToken);
           } else {
             this.logout(true); // If no new access token, logout
-            throw new Error('Refresh token endpoint did not return an access token.');
+            throw new Error(
+              'Refresh token endpoint did not return an access token.'
+            );
           }
-        }),
+        })
       );
   }
 
@@ -111,7 +117,10 @@ export class AuthService {
   }
 
   resendVerification(email: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/auth/resend-verification-email`, { email });
+    return this.http.post<any>(
+      `${this.apiUrl}/auth/resend-verification-email`,
+      { email }
+    );
   }
 
   verifyEmailToken(token: string): Observable<any> {
@@ -119,11 +128,16 @@ export class AuthService {
   }
 
   requestPasswordReset(email: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/auth/request-password-reset`, { email });
+    return this.http.post<any>(`${this.apiUrl}/auth/request-password-reset`, {
+      email,
+    });
   }
 
   resetPassword(token: string, newPassword: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/auth/reset-password`, { token, new_password: newPassword });
+    return this.http.post<any>(`${this.apiUrl}/auth/reset-password`, {
+      token,
+      new_password: newPassword,
+    });
   }
 
   // Renamed with underscore to indicate private-like usage for internal state updates
@@ -145,7 +159,6 @@ export class AuthService {
   public getAccessToken(): string | null {
     return this._getAccessToken();
   }
-
 
   isLoggedIn(): boolean {
     return this._hasValidAccessToken();
@@ -169,9 +182,11 @@ export class AuthService {
 
   private _getUserCompanyIdFromToken(): string | null {
     const decodedToken = this._decodeToken();
-    return decodedToken?.['https://hasura.io/jwt/claims']?.['x-hasura-company-id'] || null;
+    return (
+      decodedToken?.['https://hasura.io/jwt/claims']?.['x-hasura-company-id'] ||
+      null
+    );
   }
-
 
   private _hasValidAccessToken(): boolean {
     const decodedToken = this._decodeToken();

@@ -6,7 +6,7 @@ import {
   HttpRequest,
   HttpErrorResponse,
   HttpContextToken,
-  HttpContext
+  HttpContext,
 } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, filter, switchMap, take } from 'rxjs/operators';
@@ -14,18 +14,25 @@ import { AuthService } from './auth.service';
 import { Router } from '@angular/router';
 
 // Context token to bypass interception for specific requests (e.g. token refresh itself)
-export const BYPASS_AUTH_INTERCEPTOR = new HttpContextToken<boolean>(() => false);
+export const BYPASS_AUTH_INTERCEPTOR = new HttpContextToken<boolean>(
+  () => false
+);
 
 @Injectable()
 export class AuthInterceptor {
   private authService = inject(AuthService);
   private router = inject(Router);
   private isRefreshing = false;
-  private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
+  private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(
+    null
+  );
 
-  intercept(req: HttpRequest<any>, next: HttpHandlerFn): Observable<HttpEvent<any>> {
+  intercept(
+    req: HttpRequest<any>,
+    next: HttpHandlerFn
+  ): Observable<HttpEvent<any>> {
     // Allow request to bypass token refresh logic if context is set
-    if (req.context.get(BYPASS_AUTH_INTERCEPTOR) === true) {
+    if (req.context.get(BYPASS_AUTH_INTERCEPTOR)) {
       return next(req);
     }
 
@@ -41,7 +48,9 @@ export class AuthInterceptor {
           if (req.url.includes('/auth/refresh-token')) {
             // If refresh token fails, logout
             this.authService.logout();
-            return throwError(() => new Error('Refresh token failed or expired.'));
+            return throwError(
+              () => new Error('Refresh token failed or expired.')
+            );
           }
           return this.handle401Error(req, next);
         }
@@ -50,7 +59,10 @@ export class AuthInterceptor {
     );
   }
 
-  private handle401Error(request: HttpRequest<any>, next: HttpHandlerFn): Observable<HttpEvent<any>> {
+  private handle401Error(
+    request: HttpRequest<any>,
+    next: HttpHandlerFn
+  ): Observable<HttpEvent<any>> {
     if (!this.isRefreshing) {
       this.isRefreshing = true;
       this.refreshTokenSubject.next(null);
@@ -59,12 +71,19 @@ export class AuthInterceptor {
         switchMap((tokenResponse: any) => {
           this.isRefreshing = false;
           if (tokenResponse && tokenResponse.accessToken) {
-             this.refreshTokenSubject.next(tokenResponse.accessToken);
-             return next(this.addTokenHeader(request, tokenResponse.accessToken));
+            this.refreshTokenSubject.next(tokenResponse.accessToken);
+            return next(
+              this.addTokenHeader(request, tokenResponse.accessToken)
+            );
           } else {
             // Should not happen if refreshToken() handles its errors properly and throws
             this.authService.logout();
-            return throwError(() => new Error('Failed to refresh token, no new access token received.'));
+            return throwError(
+              () =>
+                new Error(
+                  'Failed to refresh token, no new access token received.'
+                )
+            );
           }
         }),
         catchError((err) => {
@@ -77,23 +96,30 @@ export class AuthInterceptor {
       // If isRefreshing is true, means a token refresh is already in progress.
       // Wait for refreshTokenSubject to emit a new token (or null if refresh failed)
       return this.refreshTokenSubject.pipe(
-        filter(token => token != null), // Wait until token is not null
+        filter((token) => token != null), // Wait until token is not null
         take(1), // Take the first emitted value
-        switchMap(jwt => {
+        switchMap((jwt) => {
           if (jwt) {
             return next(this.addTokenHeader(request, jwt));
           } else {
             // This case should ideally be handled by the original refresh failing and logging out.
             // If it reaches here, it implies refresh completed but somehow didn't yield a token for subsequent requests.
             this.authService.logout(); // Defensive logout
-            return throwError(() => new Error('Token refresh was in progress but resulted in no token.'));
+            return throwError(
+              () =>
+                new Error(
+                  'Token refresh was in progress but resulted in no token.'
+                )
+            );
           }
         }),
-         catchError(() => {
+        catchError(() => {
           // This catch is for the refreshTokenSubject pipe if it errors or completes without value
           // which is unlikely if the main refresh logic handles logout.
           this.authService.logout(); // Defensive logout
-          return throwError(() => new Error('Failed to acquire token after refresh.'));
+          return throwError(
+            () => new Error('Failed to acquire token after refresh.')
+          );
         })
       );
     }

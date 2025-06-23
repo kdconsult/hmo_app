@@ -1,6 +1,18 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
+import {
+  FormBuilder,
+  Validators,
+  ReactiveFormsModule,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,12 +22,16 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon'; // For error/success icons and password visibility
 
 import { AuthService } from '../auth.service';
-import { passwordComplexityRules, passwordComplexityMessages, passwordComplexityValidator } from '../register/register.component'; // Re-use from register
+import {
+  passwordComplexityMessages,
+  passwordComplexityValidator,
+} from '@/auth/register/register.component'; // Re-use from register
 import { finalize } from 'rxjs/operators';
-import { of } from 'rxjs'; // for handling cases where token is missing
 
 // Validator for matching passwords (can be moved to a shared validators file)
-function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
+function passwordsMatchValidator(
+  control: AbstractControl
+): ValidationErrors | null {
   const password = control.get('newPassword')?.value;
   const confirmPassword = control.get('confirmNewPassword')?.value;
   return password === confirmPassword ? null : { passwordsMismatch: true };
@@ -56,17 +72,22 @@ export class ResetPasswordComponent implements OnInit {
   // Expose to template
   public readonly passwordComplexityMessages = passwordComplexityMessages;
 
-  resetPasswordForm = this.fb.group({
-    newPassword: ['', [Validators.required, passwordComplexityValidator]],
-    confirmNewPassword: ['', [Validators.required]],
-  }, { validators: passwordsMatchValidator });
+  resetPasswordForm = this.fb.group(
+    {
+      newPassword: ['', [Validators.required, passwordComplexityValidator]],
+      confirmNewPassword: ['', [Validators.required]],
+    },
+    { validators: passwordsMatchValidator }
+  );
 
   ngOnInit(): void {
-    this.route.queryParamMap.subscribe(params => {
+    this.route.queryParamMap.subscribe((params) => {
       this.resetToken = params.get('token');
       if (!this.resetToken) {
         this.messageType.set('error');
-        this.message.set('Password reset token not found or invalid. Please request a new reset link.');
+        this.message.set(
+          'Password reset token not found or invalid. Please request a new reset link.'
+        );
         this.resetPasswordForm.disable(); // Disable form if no token
       }
     });
@@ -86,9 +107,9 @@ export class ResetPasswordComponent implements OnInit {
       return;
     }
     if (!this.resetToken) {
-        this.messageType.set('error');
-        this.message.set('Cannot reset password without a valid token.');
-        return;
+      this.messageType.set('error');
+      this.message.set('Cannot reset password without a valid token.');
+      return;
     }
 
     this.isLoading.set(true);
@@ -96,12 +117,15 @@ export class ResetPasswordComponent implements OnInit {
     const newPassword = this.newPasswordControl?.value;
 
     if (newPassword) {
-      this.authService.resetPassword(this.resetToken, newPassword)
+      this.authService
+        .resetPassword(this.resetToken, newPassword)
         .pipe(finalize(() => this.isLoading.set(false)))
         .subscribe({
           next: () => {
             this.messageType.set('success');
-            this.message.set('Password successfully reset. You will be redirected to login shortly.');
+            this.message.set(
+              'Password successfully reset. You will be redirected to login shortly.'
+            );
             this.resetPasswordForm.reset();
             this.resetPasswordForm.disable();
             setTimeout(() => this.router.navigate(['/login']), 3000); // Redirect after 3s
@@ -112,15 +136,16 @@ export class ResetPasswordComponent implements OnInit {
             if (err.error && typeof err.error.message === 'string') {
               errorMessage = err.error.message;
             } else if (err.status === 400) {
-                 errorMessage = 'Invalid or expired reset token. Please try requesting a new link.';
+              errorMessage =
+                'Invalid or expired reset token. Please try requesting a new link.';
             }
             this.message.set(errorMessage);
-          }
+          },
         });
     } else {
-        this.isLoading.set(false);
-        this.messageType.set('error');
-        this.message.set('Please enter and confirm your new password.');
+      this.isLoading.set(false);
+      this.messageType.set('error');
+      this.message.set('Please enter and confirm your new password.');
     }
   }
 }

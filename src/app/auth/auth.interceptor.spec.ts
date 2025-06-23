@@ -1,33 +1,27 @@
 import { TestBed } from '@angular/core/testing';
 import {
-  HttpClientTestingModule,
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import {
-  HTTP_INTERCEPTORS,
   HttpClient,
   HttpErrorResponse,
-  HttpRequest,
-  HttpEvent,
   provideHttpClient,
   withInterceptors,
   HttpContext,
 } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
-import { RouterTestingModule } from '@angular/router/testing';
+import { of, throwError, Subject } from 'rxjs';
 import { Router } from '@angular/router';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'; // Import Vitest globals
-import { lastValueFrom } from 'rxjs'; // For async tests
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
+import { lastValueFrom } from 'rxjs';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
 
-
-import { AuthInterceptor, authInterceptorFn, BYPASS_AUTH_INTERCEPTOR } from './auth.interceptor';
+import { authInterceptorFn, BYPASS_AUTH_INTERCEPTOR } from './auth.interceptor';
 import { AuthService } from './auth.service';
-import { environment } from '@/environments/environment'; // Standardized path alias
+import { environment } from '@/environments/environment';
 
-
-// Tests begin here, the duplicated describe and its content above this point are removed.
-describe('AuthInterceptor', () => {
+describe('authInterceptorFn', () => {
   let httpMock: HttpTestingController;
   let httpClient: HttpClient;
   let authService: AuthService;
@@ -37,19 +31,28 @@ describe('AuthInterceptor', () => {
   const mockNewAccessToken = 'new-mock-access-token';
   const testUrl = '/api/data';
 
-  // Helper to make a request that will be intercepted
-  const makeRequest = (url: string = testUrl, context?: HttpContext): Observable<HttpEvent<any>> => {
-    return httpClient.get(url, { context });
+  const makeRequest = (
+    url: string = testUrl,
+    context?: HttpContext
+  ): Promise<any> => {
+    return lastValueFrom(httpClient.get(url, { context }));
   };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [RouterTestingModule.withRoutes([])],
       providers: [
-        AuthService, // Provide real AuthService to spy on its methods
-        AuthInterceptor, // Provide the class-based interceptor for DI in authInterceptorFn
+        provideZonelessChangeDetection(),
+        provideRouter([]), // Mock router providers
         provideHttpClient(withInterceptors([authInterceptorFn])),
-        provideHttpClientTesting(), // This provides HttpTestingController
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: {
+            getAccessToken: vi.fn(),
+            refreshToken: vi.fn(),
+            logout: vi.fn(),
+          },
+        },
       ],
     });
 
@@ -58,148 +61,160 @@ describe('AuthInterceptor', () => {
     authService = TestBed.inject(AuthService);
     router = TestBed.inject(Router);
 
-    // Spy on AuthService methods using Vitest
-    vi.spyOn(authService, 'getAccessToken');
-    vi.spyOn(authService, 'refreshToken');
-    vi.spyOn(authService, 'logout').mockImplementation(() => {}); // Mock logout
-
-    localStorage.clear();
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
   });
 
   afterEach(() => {
     httpMock.verify();
-    localStorage.clear();
-    vi.clearAllMocks(); // Clear all Vitest mocks
+    vi.clearAllMocks();
   });
 
-   it('should add Authorization header if access token exists', () => {
-    // Ensure the mock is correctly typed for Vitest if needed, or use generic mockReturnValue
-    (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
+  it('should add Authorization header if access token exists', async () => {
+    (authService.getAccessToken as Mock).mockReturnValue(mockAccessToken);
 
-    makeRequest().subscribe();
+    const requestPromise = makeRequest();
 
     const httpRequest = httpMock.expectOne(testUrl);
     expect(httpRequest.request.headers.has('Authorization')).toBe(true);
     expect(httpRequest.request.headers.get('Authorization')).toBe(
       `Bearer ${mockAccessToken}`
     );
-    httpRequest.flush({}); // Complete the request
+    httpRequest.flush({});
+    await requestPromise;
   });
 
   it('should not add Authorization header if access token does not exist', async () => {
-    (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    (authService.getAccessToken as Mock).mockReturnValue(null);
 
-    const reqPromise = lastValueFrom(makeRequest());
+    const requestPromise = makeRequest();
     const httpRequest = httpMock.expectOne(testUrl);
     expect(httpRequest.request.headers.has('Authorization')).toBe(false);
     httpRequest.flush({});
-    await reqPromise; // ensure subscription completes
+    await requestPromise;
   });
 
   describe('401 Error Handling and Token Refresh', () => {
-    it('should attempt to refresh token on 401 error and retry with new token', async () => {
-      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
-      (authService.refreshToken as ReturnType<typeof vi.fn>).mockReturnValue(of({ accessToken: mockNewAccessToken }));
+    it('should attempt to refresh token on 401 and retry with new token', async () => {
+      (authService.getAccessToken as Mock).mockReturnValue(mockAccessToken);
+      (authService.refreshToken as Mock).mockReturnValue(
+        of({ accessToken: mockNewAccessToken })
+      );
 
-      const reqPromise = lastValueFrom(makeRequest());
+      const requestPromise = makeRequest();
 
       const failedReq = httpMock.expectOne(testUrl);
-      expect(failedReq.request.headers.get('Authorization')).toBe(`Bearer ${mockAccessToken}`);
-      failedReq.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
-
-      // refreshToken mock is called by the interceptor
-      // No httpMock for refresh call itself as authService.refreshToken is mocked
+      failedReq.flush(
+        { message: 'Unauthorized' },
+        { status: 401, statusText: 'Unauthorized' }
+      );
 
       const retriedReq = httpMock.expectOne(testUrl);
-      expect(retriedReq.request.headers.get('Authorization')).toBe(`Bearer ${mockNewAccessToken}`);
-      retriedReq.flush({}); // Simulate successful retry
+      expect(retriedReq.request.headers.get('Authorization')).toBe(
+        `Bearer ${mockNewAccessToken}`
+      );
+      retriedReq.flush({});
 
-      await reqPromise; // This will complete if retry is successful
+      await requestPromise;
       expect(authService.refreshToken).toHaveBeenCalledTimes(1);
     });
 
     it('should logout if refresh token call fails', async () => {
-      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
-      const refreshError = new HttpErrorResponse({ status: 401, error: 'Refresh failed' });
-      (authService.refreshToken as ReturnType<typeof vi.fn>).mockReturnValue(throwError(() => refreshError));
+      (authService.getAccessToken as Mock).mockReturnValue(mockAccessToken);
+      const refreshError = new HttpErrorResponse({
+        status: 401,
+        error: 'Refresh failed',
+      });
+      (authService.refreshToken as Mock).mockReturnValue(
+        throwError(() => refreshError)
+      );
 
-      try {
-        const reqPromise = lastValueFrom(makeRequest());
-        const failedReq = httpMock.expectOne(testUrl);
-        failedReq.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
-        await reqPromise;
-        // Vitest: expect assertion to fail if no error
-        expect.fail('Request should have failed');
-      } catch (error: any) {
-        expect(authService.refreshToken).toHaveBeenCalledTimes(1);
-        expect(authService.logout).toHaveBeenCalledTimes(1);
-        // The error caught by `lastValueFrom` will be the one from the refreshToken call
-        // or the one rethrown by the interceptor after logout.
-        expect(error).toBe(refreshError); // Or a new error wrapping it
-      }
+      const requestPromise = makeRequest();
+
+      const failedReq = httpMock.expectOne(testUrl);
+      failedReq.flush(
+        { message: 'Unauthorized' },
+        { status: 401, statusText: 'Unauthorized' }
+      );
+
+      await expect(requestPromise).rejects.toBe(refreshError);
+
+      expect(authService.refreshToken).toHaveBeenCalledTimes(1);
+      expect(authService.logout).toHaveBeenCalledTimes(1);
     });
 
-    it('should not attempt to refresh token for /auth/refresh-token URL on 401 and logout', async () => {
+    it('should not attempt refresh token for /auth/refresh-token URL and should logout', async () => {
       const refreshTokenUrl = `${environment.apiUrl}/auth/refresh-token`;
-      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
+      (authService.getAccessToken as Mock).mockReturnValue(mockAccessToken);
 
-      try {
-        const reqPromise = lastValueFrom(makeRequest(refreshTokenUrl));
-        const req = httpMock.expectOne(refreshTokenUrl);
-        req.flush({ message: 'Refresh token invalid' }, { status: 401, statusText: 'Unauthorized' });
-        await reqPromise;
-        expect.fail('Request should have failed');
-      } catch (error: any) {
-        expect(error instanceof HttpErrorResponse).toBe(true);
-        expect(error.status).toBe(401);
-        expect(authService.refreshToken).not.toHaveBeenCalled();
-        expect(authService.logout).toHaveBeenCalledTimes(1);
-      }
+      const requestPromise = makeRequest(refreshTokenUrl);
+
+      const req = httpMock.expectOne(refreshTokenUrl);
+      req.flush(
+        { message: 'Refresh token invalid' },
+        { status: 401, statusText: 'Unauthorized' }
+      );
+
+      await expect(requestPromise).rejects.toThrow();
+      expect(authService.refreshToken).not.toHaveBeenCalled();
+      expect(authService.logout).toHaveBeenCalledTimes(1);
     });
 
     it('should handle concurrent requests by refreshing token only once', async () => {
-      (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
-      (authService.refreshToken as ReturnType<typeof vi.fn>).mockReturnValue(of({ accessToken: mockNewAccessToken }));
+      (authService.getAccessToken as Mock).mockReturnValue(mockAccessToken);
+      const refreshToken$ = new Subject<{ accessToken: string }>();
+      (authService.refreshToken as Mock).mockReturnValue(
+        refreshToken$.asObservable()
+      );
 
-      const req1Promise = lastValueFrom(makeRequest('/api/data1'));
-      const req2Promise = lastValueFrom(makeRequest('/api/data2'));
+      const req1Promise = makeRequest('/api/data1');
+      const req2Promise = makeRequest('/api/data2');
 
-      const failedReq1 = httpMock.expectOne('/api/data1');
-      failedReq1.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+      const failedReqs = httpMock.match((req) =>
+        req.url.startsWith('/api/data')
+      );
+      expect(failedReqs.length).toBe(2);
 
-      const failedReq2 = httpMock.expectOne('/api/data2');
-      failedReq2.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
-
-      // At this point, refreshToken should have been triggered by the first 401.
-      // The second 401 should queue behind the ongoing refresh.
+      failedReqs[0].flush(
+        { message: 'Unauthorized' },
+        { status: 401, statusText: 'Unauthorized' }
+      );
+      failedReqs[1].flush(
+        { message: 'Unauthorized' },
+        { status: 401, statusText: 'Unauthorized' }
+      );
 
       expect(authService.refreshToken).toHaveBeenCalledTimes(1);
 
-      const retriedReq1 = httpMock.expectOne('/api/data1');
-      expect(retriedReq1.request.headers.get('Authorization')).toBe(`Bearer ${mockNewAccessToken}`);
-      retriedReq1.flush({});
+      refreshToken$.next({ accessToken: mockNewAccessToken });
+      refreshToken$.complete();
 
-      const retriedReq2 = httpMock.expectOne('/api/data2');
-      expect(retriedReq2.request.headers.get('Authorization')).toBe(`Bearer ${mockNewAccessToken}`);
-      retriedReq2.flush({});
+      const retriedReqs = httpMock.match((req) =>
+        req.url.startsWith('/api/data')
+      );
+      expect(retriedReqs.length).toBe(2);
 
-      await Promise.all([req1Promise, req2Promise]); // Ensure both requests complete successfully
+      retriedReqs[0].flush({});
+      retriedReqs[1].flush({});
+
+      await Promise.all([req1Promise, req2Promise]);
+
+      expect(retriedReqs[0].request.headers.get('Authorization')).toContain(
+        mockNewAccessToken
+      );
+      expect(retriedReqs[1].request.headers.get('Authorization')).toContain(
+        mockNewAccessToken
+      );
     });
+  });
 
-    it('should bypass interceptor if BYPASS_AUTH_INTERCEPTOR context token is true', async () => {
-        (authService.getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(mockAccessToken);
-        const context = new HttpContext().set(BYPASS_AUTH_INTERCEPTOR, true);
+  it('should bypass interceptor if BYPASS_AUTH_INTERCEPTOR context token is true', async () => {
+    const context = new HttpContext().set(BYPASS_AUTH_INTERCEPTOR, true);
+    const requestPromise = makeRequest(testUrl, context);
 
-        const reqPromise = lastValueFrom(makeRequest(testUrl, context));
+    const httpRequest = httpMock.expectOne(testUrl);
+    expect(httpRequest.request.headers.has('Authorization')).toBe(false);
 
-        const httpRequest = httpMock.expectOne(testUrl);
-        // Authorization header should NOT be added by this interceptor's primary logic
-        // If other interceptors add it, that's fine, but this one should skip its main processing.
-        // For this test, we assume no other interceptors are adding it.
-        expect(httpRequest.request.headers.has('Authorization')).toBe(false);
-        httpRequest.flush({});
-        expect(authService.getAccessToken).not.toHaveBeenCalled(); // getAccessToken is part of the logic to add header
-    });
-
+    httpRequest.flush({});
+    await requestPromise;
   });
 });

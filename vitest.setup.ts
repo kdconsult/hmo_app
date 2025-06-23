@@ -1,17 +1,4 @@
-import 'zone.js';
-import 'zone.js/testing';
-import { getTestBed } from '@angular/core/testing';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
 import { vi } from 'vitest';
-
-// Initialize Angular testing environment
-getTestBed().initTestEnvironment(
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting()
-);
 
 // Mock IntersectionObserver (useful for components using it)
 const mockIntersectionObserver = vi.fn();
@@ -21,8 +8,8 @@ mockIntersectionObserver.mockReturnValue({
   disconnect: vi.fn(),
 });
 Object.defineProperty(window, 'IntersectionObserver', {
-    value: mockIntersectionObserver,
-    writable: true,
+  value: mockIntersectionObserver,
+  writable: true,
 });
 
 // Add any other global mocks or setup needed for all tests here.

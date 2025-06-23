@@ -1,4 +1,10 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -10,10 +16,18 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
-
-import { LookupService, Country, CompanyType, LocaleInfo, Currency } from '@/core/services/lookup.service';
-import { CompanyService, CompanyCreationData } from '@/core/services/company.service';
-import { AuthService } from '@/auth/auth.service'; // For updating token if needed
+import {
+  LookupService,
+  Country,
+  CompanyType,
+  LocaleInfo,
+  Currency,
+} from '../../core/services/lookup.service';
+import {
+  CompanyService,
+  CompanyCreationData,
+} from '../../core/services/company.service';
+import { AuthService } from '../../auth/auth.service'; // For updating token if needed
 
 import { Observable, forkJoin } from 'rxjs';
 import { finalize, tap } from 'rxjs/operators';
@@ -31,7 +45,7 @@ import { finalize, tap } from 'rxjs/operators';
     MatButtonModule,
     MatSelectModule,
     MatProgressSpinnerModule,
-    MatIconModule
+    MatIconModule,
   ],
   templateUrl: './create-company.component.html',
   styleUrls: ['./create-company.component.scss'],
@@ -50,13 +64,20 @@ export class CreateCompanyComponent implements OnInit {
   successMessage = signal<string | null>(null);
 
   countries$: Observable<Country[]> = this.lookupService.getCountries();
-  companyTypes$: Observable<CompanyType[]> = this.lookupService.getCompanyTypes();
+  companyTypes$: Observable<CompanyType[]> =
+    this.lookupService.getCompanyTypes();
   locales$: Observable<LocaleInfo[]> = this.lookupService.getLocales();
   currencies$: Observable<Currency[]> = this.lookupService.getCurrencies();
 
   companyForm = this.fb.group({
-    company_name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-    company_eik: ['', [Validators.required, Validators.pattern(/^[0-9]{9,13}$/)]], // Basic EIK/VAT pattern
+    company_name: [
+      '',
+      [Validators.required, Validators.minLength(3), Validators.maxLength(100)],
+    ],
+    company_eik: [
+      '',
+      [Validators.required, Validators.pattern(/^[0-9]{9,13}$/)],
+    ], // Basic EIK/VAT pattern
     company_country_id: ['', [Validators.required]],
     company_type_id: ['', [Validators.required]],
     company_default_locale_id: ['', [Validators.required]],
@@ -73,14 +94,24 @@ export class CreateCompanyComponent implements OnInit {
       locales: this.locales$,
       currencies: this.currencies$,
     })
-    .pipe(finalize(() => this.isLoadingLookups.set(false)))
-    .subscribe({
-      error: (err) => {
-        console.error('Failed to load lookup data', err);
-        this.errorMessage.set('Failed to load required data for the form. Please try refreshing the page.');
-        this.companyForm.disable();
-      }
-    });
+      .pipe(finalize(() => this.isLoadingLookups.set(false)))
+      .subscribe({
+        error: (err) => {
+          console.error('Failed to load lookup data', err);
+          this.errorMessage.set(
+            'Failed to load required data for the form. Please try refreshing the page.'
+          );
+          this.companyForm.disable();
+        },
+      });
+  }
+
+  logout(): void {
+    this.authService.logout();
+  }
+
+  navigateToDashboard(): void {
+    this.router.navigate(['/dashboard']);
   }
 
   onSubmit(): void {
@@ -95,7 +126,8 @@ export class CreateCompanyComponent implements OnInit {
 
     const formData = this.companyForm.getRawValue() as CompanyCreationData;
 
-    this.companyService.createCompany(formData)
+    this.companyService
+      .createCompany(formData)
       .pipe(finalize(() => this.isSubmitting.set(false)))
       .subscribe({
         next: (response) => {
@@ -103,12 +135,17 @@ export class CreateCompanyComponent implements OnInit {
           // Backend might return new accessToken (definitely) and optionally a new refreshToken (if rotation is used for this event)
           if (response && response.accessToken) {
             // AuthService.updateTokens will handle using existing refresh token if new one isn't provided
-            this.authService.updateTokens(response.accessToken, response.refreshToken);
+            this.authService.updateTokens(
+              response.accessToken,
+              response.refreshToken
+            );
           }
           // After token update, authService.currentCompanyId$ should emit the new company ID if present in the new token.
           // The AuthenticatedLayoutComponent will then NOT redirect back to create-company.
 
-          this.successMessage.set(`Company '${formData.company_name}' created successfully! Redirecting to dashboard...`);
+          this.successMessage.set(
+            `Company '${formData.company_name}' created successfully! Redirecting to dashboard...`
+          );
           this.companyForm.reset();
           this.companyForm.disable();
           setTimeout(() => this.router.navigate(['/dashboard']), 3000);
@@ -117,13 +154,17 @@ export class CreateCompanyComponent implements OnInit {
           console.error('Company creation failed', err);
           if (err.error && err.error.message) {
             this.errorMessage.set(`Error: ${err.error.message}`);
-          } else if (err.status === 409) { // Example: EIK already exists
-             this.errorMessage.set('Company creation failed: This EIK might already be registered.');
+          } else if (err.status === 409) {
+            // Example: EIK already exists
+            this.errorMessage.set(
+              'Company creation failed: This EIK might already be registered.'
+            );
+          } else {
+            this.errorMessage.set(
+              'An unexpected error occurred during company creation. Please try again.'
+            );
           }
-          else {
-            this.errorMessage.set('An unexpected error occurred during company creation. Please try again.');
-          }
-        }
+        },
       });
   }
 }

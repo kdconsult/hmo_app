@@ -1,15 +1,22 @@
 import { TestBed } from '@angular/core/testing';
-import { LookupService, Country, CompanyType, LocaleInfo, Currency } from './lookup.service';
+import {
+  LookupService,
+  Country,
+  CompanyType,
+  LocaleInfo,
+  Currency,
+} from './lookup.service';
 import { of, lastValueFrom } from 'rxjs'; // Import lastValueFrom for async tests
 import { delay } from 'rxjs/operators';
 import { describe, it, expect, beforeEach } from 'vitest'; // Import Vitest globals
+import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('LookupService', () => {
   let service: LookupService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [LookupService],
+      providers: [LookupService, provideZonelessChangeDetection()],
     });
     service = TestBed.inject(LookupService);
   });

@@ -1,4 +1,9 @@
-import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router'; // RouterModule for routerLink
@@ -9,13 +14,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 
-
 import { AuthService } from '../auth.service';
 import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-request-password-reset',
-  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -25,7 +28,7 @@ import { finalize } from 'rxjs/operators';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatIconModule
+    MatIconModule,
   ],
   templateUrl: './request-password-reset.component.html',
   styleUrls: ['./request-password-reset.component.scss'],
@@ -59,7 +62,8 @@ export class RequestPasswordResetComponent {
     const email = this.emailControl?.value;
 
     if (email) {
-      this.authService.requestPasswordReset(email)
+      this.authService
+        .requestPasswordReset(email)
         .pipe(finalize(() => this.isLoading.set(false)))
         .subscribe({
           next: () => {
@@ -75,16 +79,16 @@ export class RequestPasswordResetComponent {
             // Log the actual error for debugging if necessary.
             console.error('Request password reset error:', err);
             this.messageType.set('success'); // Still show success as per BLA
-             this.message.set(
+            this.message.set(
               `If an account exists for ${email}, a password reset link has been sent. Please check your email.`
             );
             this.requestResetForm.reset();
-          }
+          },
         });
     } else {
-        this.isLoading.set(false);
-        this.messageType.set('error');
-        this.message.set('Please enter a valid email address.');
+      this.isLoading.set(false);
+      this.messageType.set('error');
+      this.message.set('Please enter a valid email address.');
     }
   }
 }
