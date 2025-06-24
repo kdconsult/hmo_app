@@ -29,16 +29,21 @@ export const routes: Routes = [
         component: RegisterComponent,
       },
       {
-        path: 'verify-email-status', // Publicly accessible page to handle the token from email link
-        component: VerifyEmailStatusComponent,
-      },
-      {
         path: 'request-password-reset',
         component: RequestPasswordResetComponent,
       },
       {
-        path: 'reset-password', // Expects a ?token=XYZ query parameter
-        component: ResetPasswordComponent,
+        path: 'auth',
+        children: [
+          {
+            path: 'verify-email-status',
+            component: VerifyEmailStatusComponent,
+          },
+          {
+            path: 'reset-password', // Expects a ?token=XYZ query parameter
+            component: ResetPasswordComponent,
+          },
+        ],
       },
     ],
   },
