@@ -5,7 +5,10 @@ html {
   color-scheme: light dark;
   @include mat.theme(
     (
-      color: mat.$rose-palette,
+      color: (
+        primary: mat.$violet-palette,
+        tertiary: mat.$orange-palette,
+      ),
       typography: Roboto,
       density: 0,
     )
