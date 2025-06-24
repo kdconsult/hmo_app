@@ -29,7 +29,7 @@ This project adheres to modern Angular best practices, emphasizing maintainabili
     * **Bad:**
         ```typescript
         @Component({
-          standalone: true,
+          
           // ...
         })
         export class MyComponent {}

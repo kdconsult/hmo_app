@@ -1,5 +1,4 @@
 import { defineConfig } from 'vitest/config';
-import { URL } from 'node:url'; // Import URL for robust path creation
 import path from 'node:path';
 
 export default defineConfig({
@@ -19,11 +18,7 @@ export default defineConfig({
     alias: [
       {
         find: '@',
-        replacement: path.resolve(__dirname, 'src/app'),
-      },
-      {
-        find: '@/environments',
-        replacement: path.resolve(__dirname, 'src/environments'),
+        replacement: path.resolve(__dirname, 'src'),
       },
     ],
   },

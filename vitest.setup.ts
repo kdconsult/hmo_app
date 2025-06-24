@@ -1,15 +1,27 @@
 import { vi } from 'vitest';
 import { getTestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
+import { NgModule, provideZonelessChangeDetection } from '@angular/core';
+import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-// Initialize the Angular testing environment.
+@NgModule({
+  providers: [
+    provideZonelessChangeDetection(),
+    provideHttpClient(withFetch()),
+    provideHttpClientTesting(),
+  ],
+})
+class ZonelessTestingModule {}
+
+// Initialize the Angular testing environment with zoneless providers.
 // This should be done only once, before any tests run.
 getTestBed().initTestEnvironment(
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting(),
+  [BrowserTestingModule, ZonelessTestingModule],
+  platformBrowserTesting(),
   // Below are Angular v15+ default options for destroyAfterEach and configureEffects,
   // ensure they align with your project's needs if you're on an older version or have specific requirements.
   {
@@ -18,7 +30,11 @@ getTestBed().initTestEnvironment(
 );
 
 // Mock IntersectionObserver (useful for components using it)
-const mockIntersectionObserver = vi.fn();
+const mockIntersectionObserver = vi.fn(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
 mockIntersectionObserver.mockReturnValue({
   observe: vi.fn(),
   unobserve: vi.fn(),

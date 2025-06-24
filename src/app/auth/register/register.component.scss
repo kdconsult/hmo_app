@@ -3,6 +3,15 @@
   height: 100%;
 }
 
+.passwords-mismatch-error {
+  margin-top: -12px;
+  padding: 0 13px;
+  font-size: var(
+    --mat-form-field-subscript-text-size,
+    var(--mat-sys-body-small-size)
+  );
+}
+
 .register-container {
   display: flex;
   justify-content: center;
@@ -56,7 +65,10 @@ mat-card-actions {
     padding: 0;
     margin: 5px 0 0 0;
     li {
-      color: var(--mat-form-field-error-text-color, #f44336); // Default to error color
+      color: var(
+        --mat-form-field-error-text-color,
+        #f44336
+      ); // Default to error color
       &.valid {
         color: green; // Or theme success color
       }
@@ -69,10 +81,12 @@ mat-card-actions {
 //   margin-bottom: 10px; // Add some space below the hints - This might be too broad, specific hints are better.
 // }
 // Targeting specific hint for password rules if needed
-:host ::ng-deep .mat-form-field-appearance-outline .mat-mdc-form-field-subscript-wrapper {
+:host
+  ::ng-deep
+  .mat-form-field-appearance-outline
+  .mat-mdc-form-field-subscript-wrapper {
   margin-bottom: 10px; // Add some space below the hints
 }
-
 
 .message {
   padding: 10px;

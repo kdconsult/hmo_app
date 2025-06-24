@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core'; // Import OnInit, OnDestroy
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { AsyncPipe } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -6,18 +6,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
-import { Observable } from 'rxjs';
-import {
-  map,
-  shareReplay,
-  takeUntil,
-  filter,
-  tap,
-  switchMap,
-} from 'rxjs/operators';
+import { Observable, Subject } from 'rxjs';
+import { map, shareReplay, filter, takeUntil } from 'rxjs/operators';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
-import { Subject, combineLatest } from 'rxjs'; // Import Subject and combineLatest
 
 @Component({
   selector: 'app-authenticated-layout',
@@ -32,7 +24,7 @@ import { Subject, combineLatest } from 'rxjs'; // Import Subject and combineLate
     AsyncPipe,
     RouterModule,
   ],
-  // standalone: true, // Ensure this component is standalone if not already part of a module
+  //  // Ensure this component is standalone if not already part of a module
 })
 export class AuthenticatedLayoutComponent implements OnInit, OnDestroy {
   private breakpointObserver = inject(BreakpointObserver);
@@ -48,39 +40,26 @@ export class AuthenticatedLayoutComponent implements OnInit, OnDestroy {
     );
 
   ngOnInit(): void {
-    combineLatest([
-      this.authService.isLoggedIn$,
-      this.authService.currentCompanyId$,
-      this.router.events.pipe(
-        filter((event) => event instanceof NavigationEnd)
-      ),
-    ])
+    // Listen to router events and check signals synchronously
+    this.router.events
       .pipe(
-        takeUntil(this.destroy$),
-        filter(([isLoggedIn, companyId, navEvent]) => {
-          // Only proceed if logged in and the navigation event is available
-          // companyId can be null, that's what we check for
-          return isLoggedIn && navEvent instanceof NavigationEnd;
-        }),
-        // switchMap here to avoid issues if companyId$ emits multiple times quickly
-        // though with current setup, it emits on token set/clear.
-        switchMap(async ([isLoggedIn, companyId, navEvent]) => {
-          const currentUrl = (navEvent as NavigationEnd).urlAfterRedirects;
-          if (isLoggedIn && !companyId && currentUrl !== '/create-company') {
-            // Check if not already trying to navigate to create-company to avoid loops
-            // Also check if not already on a public-like page if any exist within auth layout (none currently)
-            if (currentUrl.startsWith('/auth/')) {
-              // Example: if /auth/profile was under AuthenticatedLayout
-              return; // Don't redirect from other auth pages
-            }
-            console.log(
-              'User logged in but no company ID, redirecting to /create-company'
-            );
-            await this.router.navigate(['/create-company']);
-          }
-        })
+        filter((event) => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
       )
-      .subscribe();
+      .subscribe(async (event) => {
+        const isLoggedIn = this.authService.isLoggedInSignal();
+        const companyId = this.authService.currentCompanyIdSignal();
+        const currentUrl = (event as NavigationEnd).urlAfterRedirects;
+        if (isLoggedIn && !companyId && currentUrl !== '/create-company') {
+          if (currentUrl.startsWith('/auth/')) {
+            return;
+          }
+          console.log(
+            'User logged in but no company ID, redirecting to /create-company'
+          );
+          await this.router.navigate(['/create-company']);
+        }
+      });
   }
 
   ngOnDestroy(): void {

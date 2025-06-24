@@ -10,7 +10,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { Component } from '@angular/core';
 import { Mock } from 'vitest';
 
-@Component({ standalone: true, template: '' })
+@Component({ template: '' })
 class DummyComponent {}
 
 describe('AuthenticatedLayoutComponent', () => {
@@ -51,7 +51,9 @@ describe('AuthenticatedLayoutComponent', () => {
         {
           provide: BreakpointObserver,
           useValue: {
-            observe: vi.fn().mockReturnValue(mockBreakpointState$.asObservable()),
+            observe: vi
+              .fn()
+              .mockReturnValue(mockBreakpointState$.asObservable()),
           },
         },
         {
@@ -95,7 +97,10 @@ describe('AuthenticatedLayoutComponent', () => {
       mockIsLoggedIn$.next(true);
       mockCurrentCompanyId$.next(null);
       // Simulate BreakpointObserver emitting; actual value doesn't matter for this test's logic
-      mockBreakpointState$.next({ matches: false, breakpoints: {} } as BreakpointState);
+      mockBreakpointState$.next({
+        matches: false,
+        breakpoints: {},
+      } as BreakpointState);
       routerEvents$.next(new NavigationEnd(1, '/dashboard', '/dashboard'));
 
       await fixture.whenStable();
@@ -109,7 +114,10 @@ describe('AuthenticatedLayoutComponent', () => {
 
       mockIsLoggedIn$.next(false);
       mockCurrentCompanyId$.next(null);
-      mockBreakpointState$.next({ matches: false, breakpoints: {} } as BreakpointState);
+      mockBreakpointState$.next({
+        matches: false,
+        breakpoints: {},
+      } as BreakpointState);
       routerEvents$.next(new NavigationEnd(1, '/dashboard', '/dashboard'));
 
       await fixture.whenStable();
@@ -123,7 +131,10 @@ describe('AuthenticatedLayoutComponent', () => {
 
       mockIsLoggedIn$.next(true);
       mockCurrentCompanyId$.next('company123');
-      mockBreakpointState$.next({ matches: false, breakpoints: {} } as BreakpointState);
+      mockBreakpointState$.next({
+        matches: false,
+        breakpoints: {},
+      } as BreakpointState);
       routerEvents$.next(new NavigationEnd(1, '/dashboard', '/dashboard'));
 
       await fixture.whenStable();
@@ -137,8 +148,13 @@ describe('AuthenticatedLayoutComponent', () => {
 
       mockIsLoggedIn$.next(true);
       mockCurrentCompanyId$.next(null);
-      mockBreakpointState$.next({ matches: false, breakpoints: {} } as BreakpointState);
-      routerEvents$.next(new NavigationEnd(1, '/create-company', '/create-company'));
+      mockBreakpointState$.next({
+        matches: false,
+        breakpoints: {},
+      } as BreakpointState);
+      routerEvents$.next(
+        new NavigationEnd(1, '/create-company', '/create-company')
+      );
 
       await fixture.whenStable();
       fixture.detectChanges();

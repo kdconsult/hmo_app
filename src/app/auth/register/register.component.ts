@@ -11,8 +11,7 @@ import {
   ReactiveFormsModule,
   ValidationErrors,
 } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http'; // Correctly placed import
 
@@ -88,7 +87,6 @@ export function passwordComplexityValidator(
 @Component({
   selector: 'app-register',
   imports: [
-    CommonModule,
     RouterModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -106,7 +104,6 @@ export function passwordComplexityValidator(
 export class RegisterComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
-  private router = inject(Router);
   private dialog = inject(MatDialog);
 
   hidePassword = signal(true);

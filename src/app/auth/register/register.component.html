@@ -1,6 +1,6 @@
 <div class="register-container">
   <mat-card class="register-card">
-    <mat-card-header>
+    <mat-card-header class="card-header-decorated">
       <mat-card-title>Create Account</mat-card-title>
     </mat-card-header>
     <mat-card-content>
@@ -47,7 +47,11 @@
           }
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
+        <mat-form-field
+          appearance="outline"
+          class="full-width"
+          subscriptSizing="dynamic"
+        >
           <mat-label>Password</mat-label>
           <input
             matInput
@@ -71,73 +75,132 @@
           }
           <!-- Password Complexity Errors -->
           @if (registerForm.get('password')?.hasError('passwordMinLength')) {
-          <mat-error>{{passwordComplexityMessages.minLength}}</mat-error>
-          }
-          @if (registerForm.get('password')?.hasError('passwordUppercase')) {
-          <mat-error>{{passwordComplexityMessages.requireUppercase}}</mat-error>
-          }
-          @if (registerForm.get('password')?.hasError('passwordLowercase')) {
-          <mat-error>{{passwordComplexityMessages.requireLowercase}}</mat-error>
-          }
-          @if (registerForm.get('password')?.hasError('passwordNumeric')) {
-          <mat-error>{{passwordComplexityMessages.requireNumeric}}</mat-error>
-          }
-          @if (registerForm.get('password')?.hasError('passwordSpecialChar')) {
-          <mat-error>{{passwordComplexityMessages.requireSpecialChar}}</mat-error>
+          <mat-error>{{ passwordComplexityMessages.minLength }}</mat-error>
+          } @if (registerForm.get('password')?.hasError('passwordUppercase')) {
+          <mat-error>{{
+            passwordComplexityMessages.requireUppercase
+          }}</mat-error>
+          } @if (registerForm.get('password')?.hasError('passwordLowercase')) {
+          <mat-error>{{
+            passwordComplexityMessages.requireLowercase
+          }}</mat-error>
+          } @if (registerForm.get('password')?.hasError('passwordNumeric')) {
+          <mat-error>{{ passwordComplexityMessages.requireNumeric }}</mat-error>
+          } @if (registerForm.get('password')?.hasError('passwordSpecialChar'))
+          {
+          <mat-error>{{
+            passwordComplexityMessages.requireSpecialChar
+          }}</mat-error>
           }
 
           <mat-hint align="start">
             <div class="password-rules">
               <div>Password must contain:</div>
               <ul>
-                <li [class.valid]="!registerForm.get('password')?.hasError('passwordMinLength') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.minLength}}</li>
-                <li [class.valid]="!registerForm.get('password')?.hasError('passwordUppercase') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireUppercase}}</li>
-                <li [class.valid]="!registerForm.get('password')?.hasError('passwordLowercase') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireLowercase}}</li>
-                <li [class.valid]="!registerForm.get('password')?.hasError('passwordNumeric') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireNumeric}}</li>
-                <li [class.valid]="!registerForm.get('password')?.hasError('passwordSpecialChar') && registerForm.get('password')?.value">✓ {{passwordComplexityMessages.requireSpecialChar}}</li>
+                <li
+                  [class.valid]="
+                    !registerForm
+                      .get('password')
+                      ?.hasError('passwordMinLength') &&
+                    registerForm.get('password')?.value
+                  "
+                >
+                  ✓ {{ passwordComplexityMessages.minLength }}
+                </li>
+                <li
+                  [class.valid]="
+                    !registerForm
+                      .get('password')
+                      ?.hasError('passwordUppercase') &&
+                    registerForm.get('password')?.value
+                  "
+                >
+                  ✓ {{ passwordComplexityMessages.requireUppercase }}
+                </li>
+                <li
+                  [class.valid]="
+                    !registerForm
+                      .get('password')
+                      ?.hasError('passwordLowercase') &&
+                    registerForm.get('password')?.value
+                  "
+                >
+                  ✓ {{ passwordComplexityMessages.requireLowercase }}
+                </li>
+                <li
+                  [class.valid]="
+                    !registerForm
+                      .get('password')
+                      ?.hasError('passwordNumeric') &&
+                    registerForm.get('password')?.value
+                  "
+                >
+                  ✓ {{ passwordComplexityMessages.requireNumeric }}
+                </li>
+                <li
+                  [class.valid]="
+                    !registerForm
+                      .get('password')
+                      ?.hasError('passwordSpecialChar') &&
+                    registerForm.get('password')?.value
+                  "
+                >
+                  ✓ {{ passwordComplexityMessages.requireSpecialChar }}
+                </li>
               </ul>
             </div>
           </mat-hint>
         </mat-form-field>
 
-
-        <mat-form-field appearance="outline" class="full-width">
+        <mat-form-field
+          appearance="outline"
+          class="full-width"
+          subscriptSizing="dynamic"
+        >
           <mat-label>Confirm Password</mat-label>
           <input
             matInput
             formControlName="confirmPassword"
             [type]="hidePassword() ? 'password' : 'text'"
           />
-          @if (registerForm.hasError('passwordsMismatch') &&
-          registerForm.get('confirmPassword')?.touched) {
-          <mat-error>Passwords do not match</mat-error>
-          } @if (registerForm.get('confirmPassword')?.hasError('required')) {
+          @if (registerForm.get('confirmPassword')?.hasError('required')) {
           <mat-error>Password confirmation is required</mat-error>
           }
         </mat-form-field>
 
+        @if (registerForm.get('confirmPassword')?.touched &&
+        registerForm.hasError('passwordsMismatch')) {
+        <mat-error class="passwords-mismatch-error">
+          Passwords do not match
+        </mat-error>
+        }
+
         <div class="terms-agreement">
           <mat-checkbox formControlName="terms_agreed" id="terms-checkbox">
             I agree to the
-            <a href="#" (click)="openTermsDialog($event)">Terms of Service</a> and
+            <a href="#" (click)="openTermsDialog($event)">Terms of Service</a>
+            and
             <a href="#" (click)="openTermsDialog($event)">Privacy Policy</a>
           </mat-checkbox>
-          @if (registerForm.get('terms_agreed')?.hasError('requiredTrue') && registerForm.get('terms_agreed')?.touched) {
-            <mat-error class="terms-error">You must agree to the terms and conditions</mat-error>
+          @if (registerForm.get('terms_agreed')?.hasError('requiredTrue') &&
+          registerForm.get('terms_agreed')?.touched) {
+          <mat-error class="terms-error"
+            >You must agree to the terms and conditions</mat-error
+          >
           }
         </div>
-
 
         @if(registrationError()) {
         <div class="message register-error-message">
           {{ registrationError() }}
         </div>
-        }
-
-        @if(registrationSuccessMessage()) {
+        } @if(registrationSuccessMessage()) {
         <div class="message register-success-message">
           {{ registrationSuccessMessage() }}
-          <p>You can now <a routerLink="/login">Login</a> after verifying your email.</p>
+          <p>
+            You can now <a routerLink="/login">Login</a> after verifying your
+            email.
+          </p>
         </div>
         }
 

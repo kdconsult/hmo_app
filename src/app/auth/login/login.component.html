@@ -1,6 +1,6 @@
 <div class="login-container">
   <mat-card class="login-card">
-    <mat-card-header>
+    <mat-card-header class="card-header-decorated">
       <mat-card-title>Login</mat-card-title>
     </mat-card-header>
     <mat-card-content>
@@ -49,9 +49,7 @@
         <div class="login-error-message">
           {{ loginError() }}
         </div>
-        }
-
-        @if(showResendVerification()) {
+        } @if(showResendVerification()) {
         <div class="resend-verification-actions">
           <button
             mat-stroked-button
@@ -71,8 +69,14 @@
         } @if(resendVerificationMessage()) {
         <div
           class="verification-message"
-          [class.success]="!resendVerificationMessage()?.startsWith('Failed') && !resendVerificationMessage()?.startsWith('Please enter')"
-          [class.error]="resendVerificationMessage()?.startsWith('Failed') || resendVerificationMessage()?.startsWith('Please enter')"
+          [class.success]="
+            !resendVerificationMessage()?.startsWith('Failed') &&
+            !resendVerificationMessage()?.startsWith('Please enter')
+          "
+          [class.error]="
+            resendVerificationMessage()?.startsWith('Failed') ||
+            resendVerificationMessage()?.startsWith('Please enter')
+          "
         >
           {{ resendVerificationMessage() }}
         </div>
