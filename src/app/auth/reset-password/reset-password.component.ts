@@ -5,7 +5,6 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
   Validators,
@@ -39,9 +38,7 @@ function passwordsMatchValidator(
 
 @Component({
   selector: 'app-reset-password',
-  standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     RouterModule,
     MatCardModule,

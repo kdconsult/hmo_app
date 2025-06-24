@@ -209,7 +209,7 @@ describe('CreateCompanyComponent', () => {
       component.onSubmit();
       await fixture.whenStable();
       expect(component.errorMessage()).toBe(
-        'A company with this EIK/VAT number already exists.'
+        'Company creation failed: This EIK might already be registered.'
       );
     });
 
@@ -221,7 +221,7 @@ describe('CreateCompanyComponent', () => {
       component.onSubmit();
       await fixture.whenStable();
       expect(component.errorMessage()).toBe(
-        'An unexpected error occurred. Please try again.'
+        'An unexpected error occurred during company creation. Please try again.'
       );
     });
   });

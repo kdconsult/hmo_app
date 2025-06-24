@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import {
   HttpEvent,
   HttpInterceptorFn,
@@ -6,12 +6,11 @@ import {
   HttpRequest,
   HttpErrorResponse,
   HttpContextToken,
-  HttpContext,
 } from '@angular/common/http';
-import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { AuthService } from './auth.service';
-import { Router } from '@angular/router';
+import { toObservable } from '@angular/core/rxjs-interop';
 
 // Context token to bypass interception for specific requests (e.g. token refresh itself)
 export const BYPASS_AUTH_INTERCEPTOR = new HttpContextToken<boolean>(
@@ -21,11 +20,9 @@ export const BYPASS_AUTH_INTERCEPTOR = new HttpContextToken<boolean>(
 @Injectable()
 export class AuthInterceptor {
   private authService = inject(AuthService);
-  private router = inject(Router);
   private isRefreshing = false;
-  private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(
-    null
-  );
+  private refreshTokenSubject = signal<string | null>(null);
+  private refreshTokenSubject$ = toObservable(this.refreshTokenSubject);
 
   intercept(
     req: HttpRequest<any>,
@@ -65,13 +62,13 @@ export class AuthInterceptor {
   ): Observable<HttpEvent<any>> {
     if (!this.isRefreshing) {
       this.isRefreshing = true;
-      this.refreshTokenSubject.next(null);
+      this.refreshTokenSubject.set(null);
 
       return this.authService.refreshToken().pipe(
         switchMap((tokenResponse: any) => {
           this.isRefreshing = false;
           if (tokenResponse && tokenResponse.accessToken) {
-            this.refreshTokenSubject.next(tokenResponse.accessToken);
+            this.refreshTokenSubject.set(tokenResponse.accessToken);
             return next(
               this.addTokenHeader(request, tokenResponse.accessToken)
             );
@@ -95,7 +92,7 @@ export class AuthInterceptor {
     } else {
       // If isRefreshing is true, means a token refresh is already in progress.
       // Wait for refreshTokenSubject to emit a new token (or null if refresh failed)
-      return this.refreshTokenSubject.pipe(
+      return this.refreshTokenSubject$.pipe(
         filter((token) => token != null), // Wait until token is not null
         take(1), // Take the first emitted value
         switchMap((jwt) => {

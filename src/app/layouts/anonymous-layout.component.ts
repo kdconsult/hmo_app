@@ -21,7 +21,6 @@ import { RouterModule } from '@angular/router';
         justify-content: center;
         align-items: center;
         height: 100%;
-        background-color: #f0f2f5; /* A light grey background */
       }
     `,
   ],

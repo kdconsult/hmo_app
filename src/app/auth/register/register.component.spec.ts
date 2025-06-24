@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -36,7 +36,10 @@ describe('RegisterComponent', () => {
         {
           provide: MatDialog,
           useValue: {
-            open: vi.fn(),
+            // Mock open to return an object with an afterClosed method that returns an observable
+            open: vi.fn().mockReturnValue({
+              afterClosed: () => of(true), // Default to returning true, can be overridden per test
+            }),
           },
         },
       ],
@@ -137,14 +140,19 @@ describe('RegisterComponent', () => {
     });
 
     it('should toggle isSubmitting signal', async () => {
-      (authService.register as Mock).mockReturnValue(
-        throwError(() => new HttpErrorResponse({ status: 500 }))
-      );
+      const registerSubject = new Subject<void>();
+      (authService.register as Mock).mockReturnValue(registerSubject.asObservable());
+
       expect(component.isSubmitting()).toBe(false);
       component.onSubmit();
-      expect(component.isSubmitting()).toBe(true);
-      await fixture.whenStable();
-      expect(component.isSubmitting()).toBe(false);
+      expect(component.isSubmitting()).toBe(true); // Assert before observable completes
+
+      // Simulate error to trigger finalize
+      registerSubject.error(new HttpErrorResponse({ status: 500 }));
+
+      await fixture.whenStable(); // Wait for finalize and other microtasks
+      fixture.detectChanges();
+      expect(component.isSubmitting()).toBe(false); // Assert final state
     });
   });
 

@@ -67,27 +67,31 @@ describe('VerifyEmailStatusComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show loading state initially and call verifyEmailToken with token from route', async () => {
-    const pendingApi = new Subject<void>();
+  it('should show loading state initially and call verifyEmailToken', async () => {
     await configureTestBed({ token: mockToken });
+    // This mock will keep the observable pending until we complete it
+    const pendingApi = new Subject<void>();
     (authService.verifyEmailToken as Mock).mockReturnValue(
       pendingApi.asObservable()
     );
 
-    // Initial state before detectChanges
-    expect(component.isLoading()).toBe(true);
-
     fixture.detectChanges(); // ngOnInit
     await fixture.whenStable();
 
+    // Assert initial state
     expect(component.isLoading()).toBe(true);
     expect(authService.verifyEmailToken).toHaveBeenCalledWith(mockToken);
+    expect(component.verificationStatus()).toBe('pending');
 
-    pendingApi.next(); // Complete the observable
+    // Complete the API call
+    pendingApi.next();
     pendingApi.complete();
     await fixture.whenStable();
     fixture.detectChanges();
+
+    // Assert final state after API completion
     expect(component.isLoading()).toBe(false);
+    expect(component.verificationStatus()).toBe('success');
   });
 
   it('should display success message and status on successful verification', async () => {
@@ -97,6 +101,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    // fixture.detectChanges(); // Removed mistaken addition here
 
     expect(component.isLoading()).toBe(false);
     expect(component.verificationStatus()).toBe('success');
@@ -124,6 +129,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges(); // Additional detectChanges
 
     expect(component.isLoading()).toBe(false);
     expect(component.verificationStatus()).toBe('error');
@@ -140,6 +146,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges(); // Additional detectChanges
     expect(component.message()).toBe(
       'Verification token not found or already used.'
     );
@@ -153,6 +160,7 @@ describe('VerifyEmailStatusComponent', () => {
     );
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges(); // Additional detectChanges
     expect(component.message()).toBe('This email is already verified.');
   });
 

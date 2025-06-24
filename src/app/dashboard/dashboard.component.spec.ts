@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { DashboardComponent } from './dashboard.component';
 import { describe, it, expect, beforeEach } from 'vitest'; // Added Vitest globals
-import { provideZonelessChangeDetection } from '@angular/core';
 
 // If DashboardComponent uses any Material modules directly in its template,
 // and it's a standalone component, those modules should be in its OWN imports array.
@@ -18,7 +20,11 @@ describe('DashboardComponent', () => {
       imports: [
         DashboardComponent, // Import standalone component
       ],
-      providers: [provideZonelessChangeDetection()],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideNoopAnimations(),
+      ],
     }).compileComponents(); // Important if DashboardComponent uses templateUrl/styleUrls
 
     fixture = TestBed.createComponent(DashboardComponent);

@@ -6,7 +6,6 @@ import {
 } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { MatCardModule } from '@angular/material/card';
@@ -16,13 +15,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-import { AuthService } from '../auth.service';
+import { AuthService } from '@/auth/auth.service';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-login',
   imports: [
-    CommonModule,
     RouterModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -68,27 +66,26 @@ export class LoginComponent {
     this.resendVerificationMessage.set(null);
     const { email, password } = this.loginForm.getRawValue();
 
-    if (email && password) {
-      this.authService
-        .login({ email, password })
-        .pipe(finalize(() => this.isSubmitting.set(false)))
-        .subscribe({
-          next: () => this.router.navigate(['/dashboard']),
-          error: (err: HttpErrorResponse) => {
-            if (err.status === 403) {
-              // Assuming 403 is for "Email Not Verified" as per BLA
-              this.loginError.set(
-                'Email not verified. Please check your email.'
-              );
-              this.showResendVerification.set(true);
-            } else {
-              this.loginError.set(
-                'Invalid email or password. Please try again.'
-              );
-            }
-          },
-        });
+    if (!email || !password) {
+      this.loginError.set('Please enter a valid email and password.');
+      return;
     }
+
+    this.authService
+      .login({ email, password })
+      .pipe(finalize(() => this.isSubmitting.set(false)))
+      .subscribe({
+        next: () => this.router.navigate(['/dashboard']),
+        error: (err: HttpErrorResponse) => {
+          if (err.status === 403) {
+            // Assuming 403 is for "Email Not Verified" as per BLA
+            this.loginError.set('Email not verified. Please check your email.');
+            this.showResendVerification.set(true);
+          } else {
+            this.loginError.set('Invalid email or password. Please try again.');
+          }
+        },
+      });
   }
 
   onResendVerificationEmail(): void {

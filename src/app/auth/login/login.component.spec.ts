@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -108,12 +108,19 @@ describe('LoginComponent', () => {
     });
 
     it('should toggle isSubmitting signal', async () => {
-      (authService.login as Mock).mockReturnValue(of({ success: true }));
+      const loginSubject = new Subject<void>();
+      (authService.login as Mock).mockReturnValue(loginSubject.asObservable());
+
       expect(component.isSubmitting()).toBe(false);
       component.onSubmit();
-      expect(component.isSubmitting()).toBe(true);
-      await fixture.whenStable();
-      expect(component.isSubmitting()).toBe(false);
+      expect(component.isSubmitting()).toBe(true); // Assert before observable completes
+
+      loginSubject.next({ success: true } as any); // Simulate observable completion
+      loginSubject.complete();
+
+      await fixture.whenStable(); // Wait for finalize and other microtasks
+      fixture.detectChanges();
+      expect(component.isSubmitting()).toBe(false); // Assert final state
     });
   });
 
@@ -170,12 +177,19 @@ describe('LoginComponent', () => {
     });
 
     it('should toggle isResendingVerification signal', async () => {
-      (authService.resendVerification as Mock).mockReturnValue(of({}));
+      const resendSubject = new Subject<void>();
+      (authService.resendVerification as Mock).mockReturnValue(resendSubject.asObservable());
+
       expect(component.isResendingVerification()).toBe(false);
       component.onResendVerificationEmail();
-      expect(component.isResendingVerification()).toBe(true);
-      await fixture.whenStable();
-      expect(component.isResendingVerification()).toBe(false);
+      expect(component.isResendingVerification()).toBe(true); // Assert before observable completes
+
+      resendSubject.next(); // Simulate observable completion
+      resendSubject.complete();
+
+      await fixture.whenStable(); // Wait for finalize and other microtasks
+      fixture.detectChanges();
+      expect(component.isResendingVerification()).toBe(false); // Assert final state
     });
   });
 

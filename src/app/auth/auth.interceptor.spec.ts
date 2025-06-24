@@ -17,7 +17,11 @@ import { lastValueFrom } from 'rxjs';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
-import { authInterceptorFn, BYPASS_AUTH_INTERCEPTOR } from './auth.interceptor';
+import {
+  AuthInterceptor, // Import the class
+  authInterceptorFn,
+  BYPASS_AUTH_INTERCEPTOR,
+} from './auth.interceptor';
 import { AuthService } from './auth.service';
 import { environment } from '@/environments/environment';
 
@@ -53,6 +57,7 @@ describe('authInterceptorFn', () => {
             logout: vi.fn(),
           },
         },
+        AuthInterceptor, // Provide the AuthInterceptor class
       ],
     });
 

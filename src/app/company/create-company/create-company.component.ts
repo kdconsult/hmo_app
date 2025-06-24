@@ -5,7 +5,6 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -31,12 +30,12 @@ import { AuthService } from '../../auth/auth.service'; // For updating token if 
 
 import { Observable, forkJoin } from 'rxjs';
 import { finalize, tap } from 'rxjs/operators';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-create-company',
-  standalone: true,
   imports: [
-    CommonModule,
+    AsyncPipe,
     ReactiveFormsModule,
     RouterModule,
     MatCardModule,
