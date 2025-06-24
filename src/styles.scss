@@ -26,8 +26,11 @@ body {
   justify-content: center;
   background-color: var(--mat-sys-primary);
   color: var(--mat-sys-on-primary);
-  border-radius: 9px;
+  border-radius: var(
+    --mat-card-elevated-container-shape,
+    var(--mat-sys-corner-medium)
+  );
   padding-bottom: 10px !important;
   margin: -10px 20px 20px;
-  @include mat.elevation(3);
+  @include mat.elevation(4);
 }

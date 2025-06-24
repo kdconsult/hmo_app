@@ -84,9 +84,30 @@ export class AuthService {
   }
 
   logout(navigateLogin: boolean = true): void {
-    this._clearTokensAndNotify();
-    if (navigateLogin && this.isBrowser) {
-      this.router.navigate(['/login']);
+    const refreshToken = this._getRefreshToken();
+    if (refreshToken) {
+      this.http
+        .post<any>(`${this.apiUrl}/auth/logout`, { refreshToken })
+        .subscribe({
+          next: () => {
+            this._clearTokensAndNotify();
+            if (navigateLogin && this.isBrowser) {
+              this.router.navigate(['/login']);
+            }
+          },
+          error: () => {
+            // Even on error, clear tokens and navigate
+            this._clearTokensAndNotify();
+            if (navigateLogin && this.isBrowser) {
+              this.router.navigate(['/login']);
+            }
+          },
+        });
+    } else {
+      this._clearTokensAndNotify();
+      if (navigateLogin && this.isBrowser) {
+        this.router.navigate(['/login']);
+      }
     }
   }
 
