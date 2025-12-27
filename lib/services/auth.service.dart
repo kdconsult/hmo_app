@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart'
     as dio_cookie_manager;
 import 'package:flutter_application_1/models/user.model.dart';
+import 'package:flutter_application_1/utils/hmac.util.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -173,6 +174,20 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final userResponse = AuthenticatedUserResponse.fromJson(data);
+
+        // Validate HMAC if present to ensure data integrity
+        if (userResponse.hmac != null) {
+          final isValid = HmacUtil.validateHmacFromResponse(
+            data,
+            userResponse.user.id,
+          );
+
+          if (!isValid) {
+            throw Exception(
+              'HMAC validation failed - response data may have been tampered',
+            );
+          }
+        }
 
         // Store user role for Hasura
         await _storage.write(key: _userRoleKey, value: userResponse.user.role);
