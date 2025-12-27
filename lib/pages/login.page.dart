@@ -35,121 +35,135 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       appBar: AppBar(actions: [], title: const Text('Login Zone')),
       body: Center(
-        child: Card(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const ListTile(
-                leading: Icon(Icons.album),
-                title: Text('The Enchanted Nightingale'),
-                subtitle: Text('Music by Julie Gable. Lyrics by Sidney Stein.'),
-              ),
-              SizedBox(
-                width: 350,
-                child: TextField(
-                  controller: _usernameController,
-                  obscureText: false,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'[a-zA-Z0-9@._-]'),
-                    ),
-                    TextInputFormatter.withFunction((oldValue, newValue) {
-                      return TextEditingValue(
-                        text: newValue.text.toLowerCase(),
-                        selection: newValue.selection,
-                      );
-                    }),
-                  ],
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Username',
+        child: SizedBox(
+          width: 350,
+          child: Card(
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ListTile(
+                    title: Text('HMO APP'),
+                    titleAlignment: ListTileTitleAlignment.center,
                   ),
-                ),
-              ),
-              SizedBox(height: 15),
-              SizedBox(
-                width: 350,
-                child: TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Password',
-                  ),
-                ),
-              ),
-              SizedBox(height: 15),
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                  SizedBox(
+                    width: 350,
+                    child: TextField(
+                      controller: _usernameController,
+                      obscureText: false,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-Z0-9@._-]'),
+                        ),
+                        TextInputFormatter.withFunction((oldValue, newValue) {
+                          return TextEditingValue(
+                            text: newValue.text.toLowerCase(),
+                            selection: newValue.selection,
+                          );
+                        }),
+                      ],
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Username',
+                      ),
                     ),
                   ),
-                ),
-              if (_errorMessage != null) SizedBox(height: 15),
-              SizedBox(
-                width: 350,
-                child: FilledButton.tonal(
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(Colors.amber),
+                  SizedBox(height: 15),
+                  SizedBox(
+                    width: 350,
+                    child: TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Password',
+                      ),
+                    ),
                   ),
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          if (_usernameController.text.isEmpty ||
-                              _passwordController.text.isEmpty) {
-                            setState(() {
-                              _errorMessage =
-                                  'Please enter username and password';
-                            });
-                            return;
-                          }
+                  SizedBox(height: 15),
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  if (_errorMessage != null) SizedBox(height: 15),
+                  SizedBox(
+                    width: 350,
+                    child: FilledButton.tonal(
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStatePropertyAll(Colors.amber),
+                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () async {
+                              if (_usernameController.text.isEmpty ||
+                                  _passwordController.text.isEmpty) {
+                                setState(() {
+                                  _errorMessage =
+                                      'Please enter username and password';
+                                });
+                                return;
+                              }
 
-                          setState(() {
-                            _isLoading = true;
-                            _errorMessage = null;
-                          });
-
-                          final navigator = Navigator.of(context);
-                          try {
-                            await _authService.login(
-                              _usernameController.text,
-                              _passwordController.text,
-                            );
-                            // Login successful - AuthGuard will detect auth state
-                            // and navigate to HomePage automatically
-                            if (!mounted) return;
-                            navigator.pushReplacementNamed('/');
-                          } catch (e) {
-                            developer.log(
-                              'Login failed',
-                              name: 'LoginPage',
-                              error: e,
-                            );
-                            if (mounted) {
                               setState(() {
-                                _isLoading = false;
-                                _errorMessage = e.toString().replaceAll(
-                                  'Exception: ',
-                                  '',
-                                );
+                                _isLoading = true;
+                                _errorMessage = null;
                               });
-                            }
-                          }
-                        },
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('LOGIN'),
-                ),
+
+                              final navigator = Navigator.of(context);
+                              try {
+                                await _authService.login(
+                                  _usernameController.text,
+                                  _passwordController.text,
+                                );
+                                // Login successful - AuthGuard will detect auth state
+                                // and navigate to HomePage automatically
+                                if (!mounted) return;
+                                navigator.pushReplacementNamed('/');
+                              } catch (e) {
+                                developer.log(
+                                  'Login failed',
+                                  name: 'LoginPage',
+                                  error: e,
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _isLoading = false;
+                                    _errorMessage = e.toString().replaceAll(
+                                      'Exception: ',
+                                      '',
+                                    );
+                                  });
+                                }
+                              }
+                            },
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('LOGIN'),
+                                SizedBox(width: 10),
+
+                                Icon(Icons.login),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

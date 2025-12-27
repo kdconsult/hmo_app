@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:cookie_jar/cookie_jar.dart';
+import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart'
+    as dio_cookie_manager;
 import 'package:flutter_application_1/models/user.model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,12 +12,9 @@ import 'package:http/http.dart' as http;
 
 /// Service for handling authentication operations.
 class AuthService {
-  AuthService({FlutterSecureStorage? storage, http.Client? client})
-    : _storage = storage ?? const FlutterSecureStorage(),
-      _client = client ?? http.Client();
-
   final FlutterSecureStorage _storage;
   final http.Client _client;
+  late final Dio _dio;
 
   static const String _accessTokenKey = 'access_token';
   static const String _userRoleKey = 'user_role';
@@ -22,16 +23,72 @@ class AuthService {
   String get _baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   String get _authEndpoint => dotenv.env['API_AUTH_ENDPOINT'] ?? '/auth';
 
+  AuthService({FlutterSecureStorage? storage, http.Client? client})
+    : _storage = storage ?? const FlutterSecureStorage(),
+      _client = client ?? http.Client() {
+    // Initialize Dio with cookie support (equivalent to withCredentials: true)
+    _dio = Dio();
+    _dio.options.baseUrl = _baseUrl;
+    _dio.options.headers['Content-Type'] = 'application/json';
+    // Add cookie manager to handle cookies automatically
+    _dio.interceptors.add(dio_cookie_manager.CookieManager(CookieJar()));
+  }
+
+  /// Safely parses JSON from response body, returns null if not valid JSON.
+  Map<String, dynamic>? _tryParseJson(String body) {
+    try {
+      return jsonDecode(body) as Map<String, dynamic>?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Extracts error message from response, handling both JSON and plain text.
+  String _extractErrorMessage(http.Response response, String defaultMessage) {
+    final errorData = _tryParseJson(response.body);
+    if (errorData != null) {
+      return errorData['message'] as String? ?? defaultMessage;
+    }
+    // If not JSON, return the body as plain text (trimmed)
+    final bodyText = response.body.trim();
+    return bodyText.isNotEmpty ? bodyText : defaultMessage;
+  }
+
+  /// Extracts error message from Dio response.
+  String _extractDioErrorMessage(Response response, String defaultMessage) {
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      return data['message'] as String? ?? defaultMessage;
+    }
+    if (response.data is String) {
+      final bodyText = (response.data as String).trim();
+      return bodyText.isNotEmpty ? bodyText : defaultMessage;
+    }
+    return defaultMessage;
+  }
+
+  /// Extracts error message from DioException.
+  String _extractDioExceptionMessage(DioException e, String defaultMessage) {
+    if (e.response?.data is Map<String, dynamic>) {
+      final data = e.response!.data as Map<String, dynamic>;
+      return data['message'] as String? ?? defaultMessage;
+    }
+    if (e.response?.data is String) {
+      final bodyText = (e.response!.data as String).trim();
+      return bodyText.isNotEmpty ? bodyText : defaultMessage;
+    }
+    return e.message ?? defaultMessage;
+  }
+
   /// Gets CSRF token from the backend.
   Future<String> getCsrfToken() async {
     try {
-      final response = await _client.get(
-        Uri.parse('$_baseUrl$_authEndpoint/csrf-cookie'),
-      );
+      // Use dio to get CSRF cookie (cookies are automatically handled)
+      final response = await _dio.get('$_authEndpoint/csrf-cookie');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['token'] as String? ?? '';
+        final data = response.data as Map<String, dynamic>?;
+        return data?['token'] as String? ?? '';
       }
 
       throw Exception('Failed to get CSRF token: ${response.statusCode}');
@@ -51,21 +108,18 @@ class AuthService {
   /// Returns the access token on success.
   Future<String> login(String username, String password) async {
     try {
-      // Step 1: Get CSRF token
+      // Step 1: Get CSRF token (cookies are automatically sent/received)
       final csrfToken = await getCsrfToken();
 
-      // Step 2: Login with credentials
-      final response = await _client.post(
-        Uri.parse('$_baseUrl$_authEndpoint/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
-        },
-        body: jsonEncode({'username': username, 'password': password}),
+      // Step 2: Login with credentials (cookies are automatically sent)
+      final response = await _dio.post(
+        '$_authEndpoint/login',
+        data: {'username': username, 'password': password},
+        options: Options(headers: {'X-XSRF-Token': csrfToken}),
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = response.data as Map<String, dynamic>;
         final accessToken = data['accessToken'] as String?;
 
         if (accessToken == null || accessToken.isEmpty) {
@@ -81,8 +135,11 @@ class AuthService {
         return accessToken;
       }
 
-      final errorData = jsonDecode(response.body) as Map<String, dynamic>?;
-      final errorMessage = errorData?['message'] as String? ?? 'Login failed';
+      final errorMessage = _extractDioErrorMessage(response, 'Login failed');
+      throw Exception(errorMessage);
+    } on DioException catch (e) {
+      final errorMessage = _extractDioExceptionMessage(e, 'Login failed');
+      developer.log('Error during login', name: 'AuthService', error: e);
       throw Exception(errorMessage);
     } catch (e, stackTrace) {
       developer.log(
@@ -106,8 +163,11 @@ class AuthService {
       }
 
       final response = await _client.get(
-        Uri.parse('$_baseUrl$_authEndpoint/user'),
-        headers: {'Authorization': 'Bearer $accessToken'},
+        Uri.parse('$_baseUrl/api$_authEndpoint/user'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Referer': '$_baseUrl/login',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -133,9 +193,10 @@ class AuthService {
         return getAuthenticatedUser();
       }
 
-      final errorData = jsonDecode(response.body) as Map<String, dynamic>?;
-      final errorMessage =
-          errorData?['message'] as String? ?? 'Failed to get user data';
+      final errorMessage = _extractErrorMessage(
+        response,
+        'Failed to get user data',
+      );
       throw Exception(errorMessage);
     } catch (e, stackTrace) {
       developer.log(
@@ -151,13 +212,11 @@ class AuthService {
   /// Refreshes the access token using the refresh token from HTTP-only cookie.
   Future<String> refreshToken() async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl$_authEndpoint/refresh'),
-        headers: {'Content-Type': 'application/json'},
-      );
+      // Use dio to send cookies automatically (withCredentials: true equivalent)
+      final response = await _dio.post('$_authEndpoint/refresh');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = response.data as Map<String, dynamic>;
         final accessToken = data['accessToken'] as String?;
 
         if (accessToken == null || accessToken.isEmpty) {
@@ -171,7 +230,16 @@ class AuthService {
       // If refresh fails, clear tokens and throw
       await logout();
       throw Exception('Token refresh failed: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorMessage = _extractDioExceptionMessage(
+        e,
+        'Token refresh failed',
+      );
+      await logout();
+      developer.log('Error refreshing token', name: 'AuthService', error: e);
+      throw Exception(errorMessage);
     } catch (e, stackTrace) {
+      await logout();
       developer.log(
         'Error refreshing token',
         name: 'AuthService',
