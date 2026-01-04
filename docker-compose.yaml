@@ -1,0 +1,107 @@
+networks:
+  hmo-app:
+    driver: "bridge"
+
+services:
+  postgres:
+    container_name: hmo-postgres
+    hostname: hmo-postgres
+    networks:
+      - hmo-app
+    image: postgres:16.10-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+    volumes:
+      - ${POSTGRES_DATA_DIR}:/var/lib/postgresql/data
+  backend:
+    container_name: hmo-backend
+    networks:
+      - hmo-app
+    image: bogui/invoicer-backend:latest-dev
+    ports:
+      - "9000:9000"
+    environment:
+      TOKEN_SECRET: "${TOKEN_SECRET}"
+      INVOICE_SECRET: "${INVOICE_SECRET}"
+      PORT: ${PORT}
+      HOST: ${HOST}
+      HASURA_URL: "${HASURA_URL}"
+      HASURA_ADMIN_PASSWORD: ${HASURA_ADMIN_PASSWORD}
+      MAIL_HOST: hyper_m_mailpit
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USER: ${MAIL_USER}
+      MAIL_PASS: ${MAIL_PASS}
+      SITE_URL: ${SITE_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      DOWNLOAD_INVOICE_URL: ${DOWNLOAD_INVOICE_URL}
+      DOWNLOAD_INVOICE_QUERY_PARAM: ${DOWNLOAD_INVOICE_QUERY_PARAM}
+      DO_NOT_REPLAY_EMAIL: ${DO_NOT_REPLAY_EMAIL}
+      DOMAIN_URL: ${DOMAIN_URL}
+      DOMAIN: ${DOMAIN}
+      APP_NAME: ${APP_NAME}
+      LOGIN_PATH: ${LOGIN_PATH}
+      DEMO: "1"
+      # Database connection
+      PGUSER: ${PGUSER}
+      PGHOST: hyper_m_postgres
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE}
+      BACKEND_TO_BACKEND: ${BACKEND_TO_BACKEND}
+      PDF_DIR: ${PDF_DIR}
+      JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH}
+      JWT_ISSUER: "https://hyper-m.online"
+      TOKEN_HASH_SECRET: ${TOKEN_HASH_SECRET}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      ACCESS_TOKEN_EXPIRY: ${ACCESS_TOKEN_EXPIRY}
+      NODE_ENV: ${NODE_ENV}
+      ADMIN_PRIVATE_KEY_PATH: ${ADMIN_PRIVATE_KEY_PATH}
+      ADMIN_PUBLIC_KEY_PATH: ${ADMIN_PUBLIC_KEY_PATH}
+    volumes:
+      - "${BACKEND_INVOICES_VOLUME_PATH}:/documents/invoices"
+      - "${PDF_DIR}:/pdfs"
+      - "${RSA_KEYS_DIR}:/app/rsa_keys"
+      - "${BACKEND_LOGS_DIR}:/app/logs"
+    healthcheck:
+      test: curl --silent --head ${BACKEND_API_URL}/health || exit 1
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - postgres
+  graphql:
+    container_name: hmo-graphql
+    networks:
+      - hmo-app
+    image: hasura/graphql-engine:latest
+    ports:
+      - "8080:8080"
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: ${HASURA_GRAPHQL_DATABASE_URL}
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: ${HASURA_GRAPHQL_DATABASE_URL}
+      PG_DATABASE_URL: ${HASURA_GRAPHQL_DATABASE_URL}
+      HASURA_GRAPHQL_CONSOLE_ASSETS_DIR: /srv/console-assets
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_JWT_SECRET: '{"type": "RS256", "jwk_url": "${HASURA_JWT_URL}", "audience": "hmo-app", "issuer": "${HASURA_JWT_ISSUER}"}'
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: "anonymous"
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
+      TZ: Europe/Sofia
+      BACKEND_URL: ${BACKEND_URL}
+      BACKEND_TO_BACKEND: ${BACKEND_TO_BACKEND}
+    depends_on:
+      - postgresql
+      - backend
+  mailpit:
+    container_name: hmo_mailpit
+    hostname: hmo_mailpit
+    networks:
+      - hmo-app
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
