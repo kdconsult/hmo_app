@@ -1,74 +1,15 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/guards/auth.guard.dart';
-import 'package:flutter_application_1/services/auth.service.dart';
+import 'package:flutter_application_1/layouts/authenticated.layout.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final AuthService _authService = AuthService();
-  bool _isLoggingOut = false;
-
-  Future<void> _handleLogout() async {
-    if (_isLoggingOut) return;
-
-    setState(() {
-      _isLoggingOut = true;
-    });
-
-    try {
-      await _authService.logout();
-      if (!mounted) return;
-
-      // Navigate back to AuthGuard, which will re-check auth state
-      // and automatically show the login page
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const AuthGuard(clientId: '')),
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoggingOut = false;
-      });
-
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to logout: ${e.toString()}'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(onPressed: () {}, icon: Icon(Icons.home)),
-          IconButton(
-            onPressed: _isLoggingOut ? null : _handleLogout,
-            icon: _isLoggingOut
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(Icons.logout),
-            tooltip: 'Logout',
-          ),
-        ],
-        automaticallyImplyLeading: false,
-      ),
+    return AuthenticatedLayout(
       body: Center(
         child: Column(
           children: [
